@@ -1,0 +1,28 @@
+1. I ETAP
+ 1.1 Ewidencja przychodów:
+ - CRUD usług (usługa, termin realizacji, kwota),
+ - Kategoryzacja usług, przychodów,
+ - Obsługa różnych stawek VAT - możliwe do wyboru (basic 23%)
+
+ 1.2 Ewidencja kosztów:
+ - Dodanie, edycja, usunięcie faktur kosztowych [data, usługodawca, kwota, numer faktury/dokumentu, data wymagalności, data płatności - czy zapłacono, czy przekazana do księgowego)
+ - Kategoryzacja kosztów,
+ - Rozdzielenie kosztów na podatkowe i niepodatkowe (Wynajem lokalu/ZUS)
+
+ 1.3 Raportowanie:
+ - Miesięczne i roczne podsumowanie przychodów, kosztów i dochodu,
+ - wykonanych usług, rodzaju tych usług, średnia miesięczna, przewidywanie na podstawie poprzednich miesięcy,
+ - Bilans zysków i strat
+ - export do excela/PDF, pierwotnie wyświetlane w wykresach
+
+ 1.4 Obliczanie podatków za dany miesiąc oraz ZUS
+ - Automatyczne wyliczenie dochodu
+ - Wyliczenie składki zdrowotnej (z uwględnieniem progu/dochodu),
+ - Wyliczenie podatku
+
+
+2. II ETAP
+ 2.1 Import faktury do aplikacji z pliku PDF/zdjęcia
+ 2.2 Wyszukiwanie dokumentu po tagach, kategorii, numeru faktury, kontrahencie
+ 2.3 Konfiguracja danych firmy (NIP, REGON, adres, dane kontaktowe), formy opodatkowania, ZUS
+ 2.4 Kalendarz i przypomnienia - zapłaty ZUS, zbliżających się faktur, podatku etc.

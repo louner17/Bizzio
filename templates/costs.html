@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h2>Koszty</h2>
+</header>
+
+<style>
+    /* Stylowanie dla kosztów - lekko odmienne od usług */
+    .options-nav-costs {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+    }
+
+    .nav-button-costs {
+        padding: 10px 20px;
+        border: 1px solid #28a745; /* Zielony akcent dla kosztów */
+        background-color: #f0fff0; /* Jaśniejszy zielony */
+        color: #333;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .nav-button-costs:hover {
+        background-color: #e6ffe6;
+        border-color: #218838;
+        color: #000;
+    }
+
+    .nav-button-costs.active {
+        background-color: #28a745; /* Główny zielony aktywny */
+        color: white;
+        border-color: #28a745;
+    }
+
+    /* Style dla statusów płatności */
+    .status-paid {
+        background-color: #d4edda; /* Jasnozielony */
+        color: #155724; /* Ciemnozielony tekst */
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 3px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 0.85em;
+    }
+
+    .status-unpaid {
+        background-color: #f8d7da; /* Jasnoczerwony */
+        color: #721c24; /* Ciemnoczerwony tekst */
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 3px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 0.85em;
+    }
+
+    .status-transferred {
+        background-color: #cce5ff; /* Jasnoniebieski */
+        color: #004085; /* Ciemnoniebieski tekst */
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 3px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 0.85em;
+    }
+
+    .status-not-transferred {
+        background-color: #fff3cd; /* Jasnożółty */
+        color: #856404; /* Ciemnożółty tekst */
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 3px;
+        text-align: center;
+        white-space: nowrap;
+        font-size: 0.85em;
+    }
+
+    .button-small {
+        padding: 5px 10px;
+        font-size: 0.8em;
+        margin: 2px;
+        cursor: pointer;
+        border-radius: 3px;
+        border: 1px solid #ccc;
+        background-color: #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .button-small:hover {
+        background-color: #e0e0e0;
+    }
+
+    .button-paid {
+        background-color: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+
+    .button-paid:hover {
+        background-color: #218838;
+    }
+
+    .button-accountant {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    .button-accountant:hover {
+        background-color: #0056b3;
+    }
+
+    /* Styl dla tabeli, aby zmieścić więcej kolumn */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+        font-size: 0.9em; /* Zmniejsz czcionkę dla lepszego dopasowania */
+        white-space: nowrap; /* Zapobiegaj łamaniu w kolumnach */
+    }
+    th:last-child, td:last-child {
+        width: auto; /* Pozwól ostatniej kolumnie na elastyczność */
+        white-space: normal; /* Zezwól na łamanie w kolumnie Akcje */
+    }
+</style>
+
+<div class="grid" style="margin-bottom: 0.5em;">
+    <article>
+        <nav class="options-nav-costs"> {# Używamy specyficznej klasy dla kosztów #}
+            <button class="nav-button-costs active" data-target="register-expense-form" data-list-type="expenses">Zarejestruj koszt</button>
+            <button class="nav-button-costs" data-target="add-new-contractor-form" data-list-type="contractors">Dodaj kontrahenta</button>
+            <button class="nav-button-costs" data-target="add-new-expense-category-form" data-list-type="expense_categories">Dodaj kategorię kosztu</button>
+        </nav>
+    </article>
+</div>
+
+<div class="grid">
+     <article>
+        <h3 id="list-title">Lista kosztów</h3>
+        <table>
+            <thead id="list-thead">
+                <tr>
+                    <th>Nr FV</th>
+                    <th>Data FV</th>
+                    <th>Kwota Netto</th>
+                    <th>Kwota Brutto</th>
+                    <th>Kontrahent</th>
+                    <th>Kategoria</th>
+                    <th>Termin pł.</th>
+                    <th>Zapłacono</th>
+                    <th>Do księg.</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="list-tbody">
+                <tr><td colspan="10">Ładowanie danych...</td></tr>
+            </tbody>
+        </table>
+    </article>
+
+    <div id="forms-container">
+        {# FORMULARZ 1: Zarejestruj koszt #}
+        <article id="register-expense-form" class="form-section active">
+            <h3>Nowy koszt</h3>
+            <form action="/costs/add" method="post" id="register-expense-form-tag" enctype="multipart/form-data">
+                <label for="invoice_number">Numer faktury/dokumentu</label>
+                <input type="text" id="invoice_number" name="invoice_number" required>
+
+                <label for="invoice_date">Data wystawienia faktury:</label>
+                <input type="text" id="invoice_date" name="invoice_date" value="{{ initial_date }}" placeholder="YYYY-MM-DD" required>
+
+                <label for="description">Opis kosztu</label>
+                <input type="text" id="description" name="description" placeholder="Np. czynsz za biuro, materiały biurowe" required>
+
+                <label for="amount_net">Kwota Netto (PLN)</label>
+                <input type="number" id="amount_net" name="amount_net" step="0.01" required>
+
+                <label for="amount_gross">Kwota Brutto (PLN)</label>
+                <input type="number" id="amount_gross" name="amount_gross" step="0.01" required>
+
+                {# Waluta domyślnie PLN, ukryte, chyba że potrzebne będą inne #}
+                <input type="hidden" name="currency" value="PLN">
+
+                <label for="due_date">Data wymagalności płatności:</label>
+                <input type="text" id="due_date" name="due_date" value="{{ initial_date }}" placeholder="YYYY-MM-DD" required>
+
+                <label for="contractor_name">Kontrahent (Dostawca)</label>
+                <input type="text" id="contractor_name" name="contractor_name" list="contractors-list" placeholder="Wpisz lub wybierz istniejącego" required>
+                <datalist id="contractors-list">
+                    {% for contractor in contractors %}
+                    <option value="{{ contractor.name }}"></option>
+                    {% endfor %}
+                </datalist>
+
+                <label for="expense_category_id">Kategoria Kosztu</label>
+                <select id="expense_category_id" name="category_id" required>
+                    <option value="">-- Wybierz kategorię --</option>
+                    {% for category in expense_categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="attachment">Załącznik (skan FV, paragon)</label>
+                <input type="file" id="attachment" name="attachment" accept=".pdf,.jpg,.jpeg,.png">
+
+                <button type="submit">Dodaj koszt</button>
+            </form>
+        </article>
+
+        {# FORMULARZ 2: Dodaj nowego kontrahenta #}
+        <article id="add-new-contractor-form" class="form-section" style="display: none;">
+            <h3>Dodaj nowego kontrahenta</h3>
+            <form action="/contractors/add" method="post" id="add-new-contractor-form-tag">
+                <label for="new_contractor_name">Nazwa kontrahenta</label>
+                <input type="text" id="new_contractor_name" name="name" required>
+                <button type="submit">Dodaj kontrahenta</button>
+            </form>
+        </article>
+
+        {# FORMULARZ 3: Dodaj nową kategorię kosztu #}
+        <article id="add-new-expense-category-form" class="form-section" style="display: none;">
+            <h3>Dodaj nową kategorię kosztu</h3>
+            <form action="/expense_categories/add" method="post" id="add-new-expense-category-form-tag">
+                <label for="new_expense_category_name">Nazwa kategorii</label>
+                <input type="text" id="new_expense_category_name" name="name" required>
+
+                <label for="new_expense_category_tax_deductible">Czy koszt jest podatkowy?</label>
+                <select id="new_expense_category_tax_deductible" name="is_tax_deductible" required>
+                    <option value="true">Tak (podatkowy)</option>
+                    <option value="false">Nie (niepodatkowy)</option>
+                </select>
+
+                <button type="submit">Dodaj kategorię</button>
+            </form>
+        </article>
+    </div>
+</div>
+
+{# Dołączanie plików Flatpickr CSS i JS #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+
+<script>
+    // Inicjalizacja Flatpickr dla pól daty
+    flatpickr("#invoice_date", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        locale: "pl"
+    });
+    flatpickr("#due_date", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        locale: "pl"
+    });
+
+    // --- Elementy DOM ---
+    const navButtonsCosts = document.querySelectorAll('.nav-button-costs');
+    const formSectionsCosts = document.querySelectorAll('.form-section'); // Użyj tej samej klasy dla sekcji formularzy
+    const listTitle = document.getElementById('list-title');
+    const listThead = document.getElementById('list-thead');
+    const listTbody = document.getElementById('list-tbody');
+
+    const contractorsDatalist = document.getElementById('contractors-list'); // Datalist dla kontrahentów
+
+    // Funkcja do pobierania i wyświetlania danych w tabeli kosztów
+    async function loadTableData(type) {
+        listTbody.innerHTML = '<tr><td colspan="10">Ładowanie danych...</td></tr>'; // Zwiększ colspan
+        listTitle.textContent = 'Ładowanie...'; // Zresetuj tytuł
+
+        let url = '';
+        let headers = [];
+        let renderRow = () => {};
+
+        if (type === 'expenses') {
+            url = '/api/expenses';
+            listTitle.textContent = 'Lista kosztów';
+            headers = ['Nr FV', 'Data FV', 'Kwota Netto', 'Kwota Brutto', 'Kontrahent', 'Kategoria', 'Termin pł.', 'Zapłacono', 'Do księg.', 'Akcje'];
+            renderRow = (item) => {
+                const isPaidStatus = item.is_paid ? `<span class="status-paid">Tak (${item.payment_date})</span>` : `<span class="status-unpaid">Nie</span>`;
+                const isTransferredStatus = item.is_transferred_to_accountant ? `<span class="status-transferred">Tak (${item.transferred_to_accountant_date})</span>` : `<span class="status-not-transferred">Nie</span>`;
+
+                // Przyciski akcji
+                const payButton = !item.is_paid ? `<button class="button-small button-paid" onclick="markExpensePaid(${item.id})">Zapłacono</button>` : '';
+                const accountantButton = !item.is_transferred_to_accountant ? `<button class="button-small button-accountant" onclick="markExpenseToAccountant(${item.id})">Do księg.</button>` : '';
+
+                return `
+                    <td>${item.invoice_number}</td>
+                    <td>${item.invoice_date}</td>
+                    <td>${item.amount_net.toFixed(2)} ${item.currency}</td>
+                    <td>${item.amount_gross.toFixed(2)} ${item.currency}</td>
+                    <td>${item.contractor ? item.contractor.name : 'N/A'}</td>
+                    <td>${item.category ? item.category.name : 'N/A'}</td>
+                    <td>${item.due_date}</td>
+                    <td>${isPaidStatus}</td>
+                    <td>${isTransferredStatus}</td>
+                    <td>
+                        ${payButton}
+                        ${accountantButton}
+                        ${item.attachment_path ? `<a href="/${item.attachment_path}" target="_blank" class="button-small">Załącznik</a>` : ''}
+                    </td>
+                `;
+            };
+        } else if (type === 'contractors') {
+            url = '/api/contractors';
+            listTitle.textContent = 'Dostępni kontrahenci';
+            headers = ['ID', 'Nazwa'];
+            renderRow = (item) => `
+                <td>${item.id}</td>
+                <td>${item.name}</td>
+            `;
+        } else if (type === 'expense_categories') {
+            url = '/api/expense_categories';
+            listTitle.textContent = 'Dostępne kategorie kosztów';
+            headers = ['ID', 'Nazwa', 'Koszty Podatkowe'];
+            renderRow = (item) => `
+                <td>${item.id}</td>
+                <td>${item.name}</td>
+                <td>${item.is_tax_deductible ? 'Tak' : 'Nie'}</td>
+            `;
+        } else {
+            listTbody.innerHTML = '<tr><td colspan="10">Nieznany typ listy.</td></tr>';
+            return;
+        }
+
+        // Ustaw nagłówki tabeli
+        listThead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}. Response: ${errorText}`);
+            }
+            const data = await response.json();
+
+            listTbody.innerHTML = ''; // Wyczyść tabelę
+
+            if (data.length === 0) {
+                listTbody.innerHTML = `<tr><td colspan="${headers.length}">Brak danych do wyświetlenia.</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = renderRow(item);
+                listTbody.appendChild(row);
+            });
+        } catch (error) {
+            console.error(`Błąd podczas ładowania danych dla ${type}:`, error);
+            listTbody.innerHTML = `<tr><td colspan="${headers.length}">Błąd ładowania danych: ${error.message}</td></tr>`;
+        }
+    }
+
+    // Funkcje do oznaczania statusu płatności/przekazania
+    async function markExpensePaid(expenseId) {
+        try {
+            const response = await fetch(`/costs/${expenseId}/pay`, { method: 'POST' });
+            if (response.ok) {
+                alert('Koszt oznaczony jako opłacony!');
+                loadTableData('expenses'); // Odśwież tabelę
+            } else {
+                const errorData = await response.json();
+                alert('Błąd podczas oznaczania kosztu jako opłaconego: ' + errorData.detail);
+            }
+        } catch (error) {
+            console.error('Błąd sieci lub serwera:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    }
+
+    async function markExpenseToAccountant(expenseId) {
+        try {
+            const response = await fetch(`/costs/${expenseId}/to_accountant`, { method: 'POST' });
+            if (response.ok) {
+                alert('Koszt oznaczony jako przekazany do księgowego!');
+                loadTableData('expenses'); // Odśwież tabelę
+            } else {
+                const errorData = await response.json();
+                alert('Błąd podczas oznaczania kosztu jako przekazanego do księgowego: ' + errorData.detail);
+            }
+        } catch (error) {
+            console.error('Błąd sieci lub serwera:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    }
+
+
+    // --- Event Listenery ---
+
+    // Obsługa przełączania widoków formularzy i list dla kosztów
+    navButtonsCosts.forEach(button => {
+        button.addEventListener('click', () => {
+            // Przełączanie aktywnego przycisku
+            navButtonsCosts.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Przełączanie widoczności formularzy
+            const targetFormId = button.dataset.target;
+            formSectionsCosts.forEach(section => {
+                section.style.display = 'none';
+            });
+            const targetSection = document.getElementById(targetFormId);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+
+            // Ładowanie odpowiednich danych do tabeli
+            const listType = button.dataset.listType;
+            loadTableData(listType);
+        });
+    });
+
+    // --- Inicjalizacja przy ładowaniu strony ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Ustawienie początkowego widoku formularza i ładowanie początkowej listy kosztów
+        const initialActiveButton = document.querySelector('.nav-button-costs.active') || document.querySelector('.nav-button-costs');
+        if (initialActiveButton) {
+            const initialTargetId = initialActiveButton.dataset.target;
+            const initialSection = document.getElementById(initialTargetId);
+            if (initialSection) {
+                initialSection.style.display = 'block';
+            }
+            const initialListType = initialActiveButton.dataset.listType;
+            loadTableData(initialListType);
+        }
+    });
+
+    // Obsługa dodawania kosztu (odświeżanie tabeli po sukcesie)
+    document.getElementById('register-expense-form-tag').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method,
+                body: formData
+            });
+
+            if (response.ok) {
+                alert('Koszt dodany pomyślnie!');
+                form.reset();
+                flatpickr("#invoice_date").setDate(new Date());
+                flatpickr("#due_date").setDate(new Date());
+                loadTableData('expenses'); // Odświeża tabelę kosztów
+                updateContractorsDatalist(); // Przeładowanie kontrahentów dla datalisty
+            } else {
+                const errorData = await response.text();
+                alert('Błąd podczas dodawania kosztu: ' + errorData);
+                console.error('Błąd API:', errorData);
+            }
+        } catch (error) {
+            console.error('Błąd sieci lub serwera:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    });
+
+    // Funkcja do aktualizacji datalisty kontrahentów
+    async function updateContractorsDatalist() {
+        try {
+            const response = await fetch('/api/contractors');
+            if (!response.ok) throw new Error('Failed to fetch contractors');
+            const contractors = await response.json();
+            contractorsDatalist.innerHTML = '';
+            contractors.forEach(contractor => {
+                const option = document.createElement('option');
+                option.value = contractor.name;
+                contractorsDatalist.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error updating contractors datalist:', error);
+        }
+    }
+
+
+    // Obsługa dodawania kontrahenta (odświeżanie tabeli po sukcesie)
+    document.getElementById('add-new-contractor-form-tag').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method,
+                body: formData
+            });
+
+            if (response.ok) {
+                alert('Kontrahent dodany pomyślnie!');
+                form.reset();
+                loadTableData('contractors'); // Odświeża tabelę kontrahentów
+                updateContractorsDatalist(); // Odświeża datalistę w formularzu kosztów
+            } else {
+                const errorData = await response.text();
+                alert('Błąd podczas dodawania kontrahenta: ' + errorData);
+                console.error('Błąd API:', errorData);
+            }
+        } catch (error) {
+            console.error('Błąd sieci lub serwera:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    });
+
+    // Obsługa dodawania kategorii kosztów (odświeżanie tabeli po sukcesie)
+    document.getElementById('add-new-expense-category-form-tag').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        // FastAPI z Form() konwertuje "true"/"false" stringi na bool
+        // Tutaj musimy ręcznie skonwertować, jeśli używamy formData bezpośrednio
+        const isTaxDeductibleValue = form.querySelector('#new_expense_category_tax_deductible').value === 'true';
+        formData.set('is_tax_deductible', isTaxDeductibleValue);
+
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method,
+                body: formData
+            });
+
+            if (response.ok) {
+                alert('Kategoria kosztu dodana pomyślnie!');
+                form.reset();
+                loadTableData('expense_categories'); // Odświeża tabelę kategorii
+                window.location.reload(); // Proste odświeżenie całej strony, żeby Jinja2 odświeżył dropdowny
+            } else {
+                const errorData = await response.text();
+                alert('Błąd podczas dodawania kategorii kosztu: ' + errorData);
+                console.error('Błąd API:', errorData);
+            }
+        } catch (error) {
+            console.error('Błąd sieci lub serwera:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    });
+</script>
+
+{% endblock %}

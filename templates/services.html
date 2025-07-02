@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h2 class="page-header-title">Rejestr usług</h2> {# Ten tytuł będzie wyświetlany w Top Barze #}
+</header>
+
+<div class="grid">
+    <article class="card"> {# Zmieniamy na klasę 'card' dla spójnego wyglądu #}
+        <div class="card-header">
+            <h3>Lista usług</h3>
+            <button class="button primary-button" id="open-add-service-modal">
+                <i class="ri-add-line"></i> Dodaj nową usługę
+            </button>
+        </div>
+
+        <div class="table-responsive"> {# Kontener dla przewijanej tabeli #}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Nazwa usługi</th>
+                        <th>Cena netto (PLN)</th>
+                    </tr>
+                </thead>
+                <tbody id="list-tbody-services">
+                    <tr><td colspan="9">Ładowanie danych...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </article>
+</div>
+
+{# MODAL STRUCTURE for adding a new service #}
+<div id="add-service-modal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="modal-close-button">&times;</button>
+        <h3>Dodaj nową usługę</h3>
+        <form action="/services/add" method="post" id="add-service-form">
+            <label for="service_type_id">Typ usługi</label>
+            <select id="service_type_id" name="service_type_id" required>
+                <option value="">-- Wybierz typ usługi --</option>
+                {% for service_type in service_types %} {# Upewnij się, że service_types jest przekazywane z backendu #}
+                <option value="{{ service_type.id }}">{{ service_type.name }} ({{ service_type.category.name }})</option>
+                {% endfor %}
+            </select>
+
+            <label for="date">Data:</label>
+            <input type="text" id="service_date" name="date" value="{{ initial_date }}" placeholder="YYYY-MM-DD" required>
+
+            <label for="base_price_net">Cena netto (PLN):</label>
+            <input type="number" id="service_base_price_net" name="base_price_net" step="0.01" required>
+
+            <button type="submit" class="primary-button">Dodaj usługę</button>
+        </form>
+    </div>
+</div>
+
+
+{# Include Flatpickr JS - jeśli już jest w base.html, możesz to usunąć stąd #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
+
+
+<script>
+    // Inicjalizacja Flatpickr dla pola daty w modalu
+    flatpickr("#service_date", {
+        dateFormat: "Y-m-d",
+        allowInput: true,
+        locale: "pl"
+    });
+
+    // --- Elementy Modala ---
+    const addServiceModal = document.getElementById('add-service-modal');
+    const openAddServiceModalBtn = document.getElementById('open-add-service-modal');
+    const modalCloseButton = addServiceModal.querySelector('.modal-close-button');
+    const addServiceForm = document.getElementById('add-service-form');
+
+    // --- Elementy Tabeli ---
+    const listTbodyServices = document.getElementById('list-tbody-services');
+
+    // Funkcja otwierająca modal
+openAddServiceModalBtn.addEventListener('click', () => {
+    addServiceModal.classList.add('active'); // Użyj klasy 'active'
+    addServiceForm.reset(); // Zresetuj formularz przy otwarciu
+    flatpickr("#service_date").setDate(new Date()); // Ustaw bieżącą datę
+});
+
+    // Funkcja zamykająca modal
+modalCloseButton.addEventListener('click', () => {
+    addServiceModal.classList.remove('active'); // Usuń klasę 'active'
+});
+
+    // Zamknięcie modala po kliknięciu poza jego zawartością
+addServiceModal.addEventListener('click', (e) => {
+    if (e.target === addServiceModal) {
+        addServiceModal.classList.remove('active'); // Usuń klasę 'active'
+    }
+});
+
+    // --- Logika ładowania danych do tabeli (AJAX) ---
+    async function loadServicesTableData() {
+        listTbodyServices.innerHTML = '<tr><td colspan="9">Ładowanie danych usług...</td></tr>'; // Kolumny dostosowane
+
+        try {
+            const response = await fetch('/api/services'); // Upewnij się, że masz ten endpoint
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}. Response: ${errorText}`);
+            }
+            const data = await response.json();
+
+            listTbodyServices.innerHTML = ''; // Wyczyść tabelę
+
+            if (data.length === 0) {
+                listTbodyServices.innerHTML = '<tr><td colspan="9">Brak usług do wyświetlenia.</td></tr>';
+                return;
+            }
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.date}</td>
+                    <td>${item.service_type ? item.service_type.name : 'N/A'}</td>
+                    <td>${item.base_price_net.toFixed(2)}</td>
+                `;
+                listTbodyServices.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Błąd podczas ładowania danych usług:', error);
+            listTbodyServices.innerHTML = `<tr><td colspan="9">Błąd ładowania danych: ${error.message}</td></tr>`;
+        }
+    }
+
+    // --- Logika wysyłania formularza (AJAX) ---
+    addServiceForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        // Konwersja FormData na JSON
+        const jsonData = {};
+        formData.forEach((value, key) => {
+            jsonData[key] = value;
+        });
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(jsonData)
+            });
+
+            if (response.ok) {
+                alert('Usługa dodana pomyślnie!');
+                addServiceModal.style.display = 'none'; // Zamknij modal
+                form.reset(); // Zresetuj formularz
+                loadServicesTableData(); // Odśwież tabelę
+            } else {
+                const errorData = await response.json();
+                alert('Błąd podczas dodawania usługi: ' + (errorData.detail || JSON.stringify(errorData)));
+                console.error('Błąd API:', errorData);
+            }
+        } catch (error) {
+            console.error('Błąd sieci lub serwera:', error);
+            alert('Wystąpił błąd podczas komunikacji z serwerem.');
+        }
+    });
+
+    // --- Początkowe ładowanie danych ---
+    document.addEventListener('DOMContentLoaded', () => {
+        loadServicesTableData();
+    });
+</script>
+{% endblock %}

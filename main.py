@@ -14,14 +14,13 @@ from database import Base, engine
 
 app = FastAPI()
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/attachments", StaticFiles(directory="attachments"), name="attachments")
+templates = Jinja2Templates(directory="templates")
+
 # Dołączanie routerów z poszczególnych modułów
 app.include_router(services_router)
 app.include_router(costs_router)
-
-# Montowanie katalogu 'static' dla plików statycznych (CSS, JS)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-templates = Jinja2Templates(directory="templates")
 
 @app.on_event("startup")
 def startup_event():
@@ -32,3 +31,18 @@ def startup_event():
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "page_title": "Dashboard"})
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request, "title": "Dashboard"})
+
+@app.get("/clients", response_class=HTMLResponse)
+async def clients_page(request: Request):
+    return templates.TemplateResponse("clients.html", {"request": request, "title": "Klienci"})
+
+@app.get("/invoices", response_class=HTMLResponse)
+async def invoices_page(request: Request):
+    return templates.TemplateResponse("invoices.html", {"request": request, "title": "Faktury"})
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    return templates.TemplateResponse("settings.html", {"request": request, "title": "Ustawienia"})

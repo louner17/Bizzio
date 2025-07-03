@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Request, Depends, HTTPException, status, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ from app.core.dependencies import get_db
 
 # Importujemy CRUD i modele z bieżącego modułu services
 import app.services.crud as crud
-import app.services.models as models
+import app.services.schemas as schemas
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -26,7 +26,7 @@ async def list_services(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("services.html", {
         "request": request,
         "services": services,
-        "services_types": service_types,
+        "service_types": service_types,
         "categories": categories,
         "vat_rates": vat_rates,
         "initial_date": initial_date,
@@ -74,20 +74,18 @@ async def get_categories_api(db: Session = Depends(get_db)):
         } for c in categories
     ]
 
-@router.post("/services/add", response_class=RedirectResponse)
+@router.post("/services/add", response_model=schemas.ServiceDisplay, status_code=status.HTTP_201_CREATED)
 async def add_service(
-        service_type_id: int = Form("service_type_id"),
-        date: datetime.date = Form(...),
-        base_price_net: float = Form(...),
+        service_data: schemas.ServiceCreate,
         db: Session = Depends(get_db)
 ):
-    crud.create_service(
+    db_service = crud.create_service(
         db=db,
-        service_type_id=service_type_id,
-        date=date,
-        price=base_price_net
+        service_type_id=service_data.service_type_id,
+        date=service_data.date,
+        price=service_data.base_price_net  # Cena z pola base_price_net
     )
-    return RedirectResponse(url="/services", status_code=303)
+    return db_service
 
 @router.post("/service_types/add", response_class=RedirectResponse)
 async def add_service_type(

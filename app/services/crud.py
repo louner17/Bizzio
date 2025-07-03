@@ -4,7 +4,10 @@ import app.services.models as models
 
 # --- Operacje CRUD dla Usług ---
 def get_services(db: Session):
-    return db.query(models.Service).options(joinedload(models.Service.service_type)).all()
+    return db.query(models.Service).options(
+        joinedload(models.Service.service_type).joinedload(models.ServiceType.category),
+        joinedload(models.Service.service_type).joinedload(models.ServiceType.vat_rate)
+    ).all()
 
 def create_service(db: Session, service_type_id: int, date: datetime.date, price: float):
     db_service = models.Service(
@@ -14,8 +17,21 @@ def create_service(db: Session, service_type_id: int, date: datetime.date, price
     )
     db.add(db_service)
     db.commit()
-    db.refresh(db_service)
-    return db_service
+    #db.refresh(db_service)
+
+    loaded_service = db.query(models.Service).options(
+        joinedload(models.Service.service_type).joinedload(models.ServiceType.category)
+    ).filter(models.Service.id == db_service.id).first()
+
+    # Critical check:
+    if not loaded_service.service_type:
+        raise ValueError(f"ServiceType not loaded for service ID {loaded_service.id}")
+    if not loaded_service.service_type.category:
+        raise ValueError(f"ServiceCategory not loaded for ServiceType ID {loaded_service.service_type.id}")
+    if not loaded_service.service_type.vat_rate:
+        raise ValueError(f"VatRate not loaded for ServiceType ID {loaded_service.service_type.id}")
+
+    return loaded_service
 
 # --- Operacje CRUD dla Kategorii ---
 def get_categories(db: Session):
@@ -49,7 +65,10 @@ def get_or_create_vat_rate(db: Session, description: str, rate: float):
 
 # --- Operacje CRUD dla Typów Usług ---
 def get_service_types(db: Session):
-    return db.query(models.ServiceType).options(joinedload(models.ServiceType.category)).all()
+    return db.query(models.ServiceType).options(
+        joinedload(models.ServiceType.category),
+        joinedload(models.ServiceType.vat_rate)
+    ).all()
 
 def get_or_create_service_type(db: Session, name: str, category_id: int, vat_rate_id: int):
     # Sprawdza, czy usługa już istnieje.

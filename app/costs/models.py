@@ -8,6 +8,8 @@ class Contractor(Base):
     __tablename__ = "contractors"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
+    bank_account_number = Column(String, nullable=True)  # Opcjonalny numer konta
+    is_recurring = Column(Boolean, default=False)  # Czy płatności są cykliczne
     expenses = relationship("Expense", back_populates="contractor")
 
 class ExpenseCategory(Base):
@@ -42,3 +44,8 @@ class Expense(Base):
 
     contractor = relationship("Contractor", back_populates="expenses")
     category = relationship("ExpenseCategory", back_populates="expenses")
+
+    @property
+    def amount_vat(self):
+        """Oblicza i zwraca kwotę VAT na podstawie kwoty brutto i netto."""
+        return self.amount_gross - self.amount_net

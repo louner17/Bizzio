@@ -1,161 +1,151 @@
-from fastapi import APIRouter, Request, Depends, Form, HTTPException, File, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+# plik: app/costs/router.py
+
+from fastapi import APIRouter, Request, Depends, Form, HTTPException, File, UploadFile, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
-import datetime
-import os
-import shutil
+from typing import List, Optional
+from datetime import date # Upewnij się, że ten import jest
 
-# Importujemy zależności z naszego nowego modułu core
 from app.core.dependencies import get_db
-
-# Importujemy CRUD i modele z bieżącego modułu costs
 import app.costs.crud as crud
-import app.costs.models as models # Możesz nie potrzebować bezpośrednio, ale dobra praktyka by mieć
+import app.costs.models as models
+import app.costs.schemas as schemas
 
-
-router = APIRouter()
+# WAŻNA ZMIANA: Usuwamy prefiks z definicji routera
+router = APIRouter(tags=["Costs"])
 templates = Jinja2Templates(directory="templates")
 
-# Ustawienia dla załączników
-ATTACHMENTS_DIR = "attachments"
+# --- ŚCIEŻKI DLA STRON HTML ---
 
-@router.get("/costs", response_class=HTMLResponse)
-async def list_costs(request: Request, db: Session = Depends(get_db)):
-    """Wyświetla listę wszystkich kosztów oraz formularze do zarządzania kosztami."""
+@router.get("/costs/", response_class=HTMLResponse) # Pełna ścieżka
+async def list_costs_page(request: Request, db: Session = Depends(get_db)):
+    """Wyświetla główną stronę rejestru kosztów."""
     contractors = crud.get_contractors(db)
     expense_categories = crud.get_expense_categories(db)
-    initial_date = datetime.date.today().strftime('%Y-%m-%d')
     return templates.TemplateResponse("costs.html", {
         "request": request,
         "contractors": contractors,
         "expense_categories": expense_categories,
-        "initial_date": initial_date,
         "page_title": "Koszty"
     })
 
-@router.get("/api/expenses", response_model=List[Dict[str, Any]])
-async def get_expenses_api(db: Session = Depends(get_db)):
-    expenses = crud.get_expenses(db)
-    return [
-        {
-            "id": e.id,
-            "invoice_number": e.invoice_number,
-            "invoice_date": e.invoice_date.isoformat(),
-            "description": e.description,
-            "amount_net": e.amount_net,
-            "amount_gross": e.amount_gross,
-            "currency": e.currency,
-            "due_date": e.due_date.isoformat(),
-            "payment_date": e.payment_date.isoformat() if e.payment_date else None,
-            "is_paid": e.is_paid,
-            "transferred_to_accountant_date": e.transferred_to_accountant_date.isoformat() if e.transferred_to_accountant_date else None,
-            "is_transferred_to_accountant": e.is_transferred_to_accountant,
-            "attachment_path": e.attachment_path,
-            "contractor": {
-                "id": e.contractor.id,
-                "name": e.contractor.name
-            },
-            "category": {
-                "id": e.category.id,
-                "name": e.category.name,
-                "is_tax_deductible": e.category.is_tax_deductible
-            }
-        } for e in expenses
-    ]
-
-@router.get("/api/contractors", response_model=List[Dict[str, Any]])
-async def get_contractors_api(db: Session = Depends(get_db)):
-    contractors = crud.get_contractors(db)
-    return [
-        {
-            "id": c.id,
-            "name": c.name
-        } for c in contractors
-    ]
-
-@router.get("/api/expense_categories", response_model=List[Dict[str, Any]])
-async def get_expense_categories_api(db: Session = Depends(get_db)):
-    expense_categories = crud.get_expense_categories(db)
-    return [
-        {
-            "id": ec.id,
-            "name": ec.name,
-            "is_tax_deductible": ec.is_tax_deductible
-        } for ec in expense_categories
-    ]
-
-@router.post("/costs/add", response_class=RedirectResponse)
-async def add_expense(
-        invoice_number: str = Form(...),
-        invoice_date: datetime.date = Form(...),
-        description: str = Form(...),
-        amount_net: float = Form(...),
-        amount_gross: float = Form(...),
-        currency: str = Form("PLN"),
-        due_date: datetime.date = Form(...),
-        contractor_name: str = Form(...),
-        category_id: int = Form(...),
-        attachment: UploadFile = File(None),
-        db: Session = Depends(get_db)
-):
-    contractor = crud.get_or_create_contractor(db, name=contractor_name)
-
-    attachment_path = None
-    if attachment and attachment.filename:
-        # Tworzenie ścieżki do zapisu pliku: attachments/expenses/YYYY/MM/filename.ext
-        year_month_path = os.path.join(ATTACHMENTS_DIR, "expenses",
-                                      str(invoice_date.year),
-                                      str(invoice_date.month).zfill(2))
-        os.makedirs(year_month_path, exist_ok=True)
-        file_location = os.path.join(year_month_path, attachment.filename)
-
-        with open(file_location, "wb+") as file_object:
-            shutil.copyfileobj(attachment.file, file_object)
-        attachment_path = file_location
-
-    crud.create_expense(
-        db=db,
-        invoice_number=invoice_number,
-        invoice_date=invoice_date,
-        description=description,
-        amount_net=amount_net,
-        amount_gross=amount_gross,
-        currency=currency,
-        due_date=due_date,
-        contractor_id=contractor.id,
-        category_id=category_id,
-        attachment_path=attachment_path
+@router.get("/costs/add-category", response_class=HTMLResponse) # Pełna ścieżka
+async def expense_categories_page(request: Request, db: Session = Depends(get_db)):
+    """Wyświetla stronę do zarządzania kategoriami kosztów."""
+    return templates.TemplateResponse(
+        "expense_categories.html",
+        {"request": request, "page_title": "Kategorie kosztów"}
     )
-    return RedirectResponse(url="/costs", status_code=303)
 
-@router.post("/costs/{expense_id}/pay", response_class=JSONResponse)
-async def pay_expense(expense_id: int, request: Request, db: Session = Depends(get_db)):
-    payment_date = datetime.date.today()
+# --- ENDPOINTY API DLA KOSZTÓW ---
+
+@router.get("/costs/api", response_model=List[schemas.Expense]) # Pełna ścieżka
+async def get_expenses_api(db: Session = Depends(get_db)):
+    """Zwraca listę wszystkich kosztów, posortowaną."""
+    expenses = crud.get_expenses(db)
+    return expenses
+
+# ... (reszta endpointów API również musi mieć pełne ścieżki)
+
+@router.post("/costs/api", response_model=schemas.Expense) # Pełna ścieżka
+async def create_expense_api(expense_data: schemas.ExpenseCreate, db: Session = Depends(get_db)):
+    return crud.create_expense(db=db, expense_data=expense_data)
+
+@router.put("/costs/api/{expense_id}", response_model=schemas.Expense) # Pełna ścieżka
+async def update_expense_api(expense_id: int, expense_data: schemas.ExpenseUpdate, db: Session = Depends(get_db)):
+    updated = crud.update_expense(db, expense_id=expense_id, expense_data=expense_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Koszt nie znaleziony")
+    return updated
+
+@router.delete("/costs/api/{expense_id}", status_code=status.HTTP_204_NO_CONTENT) # Pełna ścieżka
+async def delete_expense_api(expense_id: int, db: Session = Depends(get_db)):
+    if not crud.delete_expense(db, expense_id=expense_id):
+        raise HTTPException(status_code=404, detail="Koszt nie znaleziony")
+    return {"ok": True}
+
+@router.post("/costs/{expense_id}/pay") # Pełna ścieżka
+async def pay_expense(expense_id: int, payment_date: date = Form(...), db: Session = Depends(get_db)):
     updated_expense = crud.update_expense_payment_status(db, expense_id, payment_date)
     if not updated_expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-    return {"message": "Expense marked as paid", "payment_date": payment_date.isoformat()}
+        raise HTTPException(status_code=404, detail="Koszt nie znaleziony")
+    return {"success": True, "message": "Koszt oznaczony jako opłacony."}
 
-@router.post("/costs/{expense_id}/to_accountant", response_class=JSONResponse)
-async def transfer_expense_to_accountant(expense_id: int, request: Request, db: Session = Depends(get_db)):
-    transferred_date = datetime.date.today()
-    updated_expense = crud.update_expense_accountant_status(db, expense_id, transferred_date)
-    if not updated_expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
-    return {"message": "Expense marked as transferred to accountant", "transferred_date": transferred_date.isoformat()}
+# --- ENDPOINTY API DLA KATEGORII KOSZTÓW ---
 
-@router.post("/contractors/add", response_class=RedirectResponse)
-async def add_contractor_from_form(name: str = Form(...), db: Session = Depends(get_db)):
-    crud.get_or_create_contractor(db, name=name)
-    return RedirectResponse(url="/costs", status_code=303)
+@router.get("/costs/api/categories", response_model=List[schemas.ExpenseCategory]) # Pełna ścieżka
+async def get_expense_categories_api(db: Session = Depends(get_db)):
+    return crud.get_expense_categories(db)
 
-@router.post("/expense_categories/add", response_class=RedirectResponse)
-async def add_expense_category_from_form(
-        name: str = Form(...),
-        is_tax_deductible: bool = Form(True),
-        db: Session = Depends(get_db)
+@router.post("/costs/api/categories", response_model=schemas.ExpenseCategory)
+async def create_expense_category_api(
+    category_data: schemas.ExpenseCategoryCreate,
+    db: Session = Depends(get_db)
 ):
-    crud.get_or_create_expense_category(db, name=name, is_tax_deductible=is_tax_deductible)
-    return RedirectResponse(url="/costs", status_code=303)
+    return crud.get_or_create_expense_category(
+        db,
+        name=category_data.name,
+        is_tax_deductible=category_data.is_tax_deductible
+    )
+
+# --- ENDPOINTY API DLA KONTRAHENTÓW ---
+@router.get("/costs/api/contractors", response_model=List[schemas.Contractor]) # Pełna ścieżka
+async def get_contractors_api(db: Session = Depends(get_db)):
+    return crud.get_contractors(db)
+
+@router.get("/costs/contractors", response_class=HTMLResponse)
+async def contractors_page(request: Request, db: Session = Depends(get_db)):
+    """Wyświetla stronę do zarządzania kontrahentami."""
+    return templates.TemplateResponse(
+        "contractors.html",
+        {"request": request, "page_title": "Kontrahenci"}
+    )
+
+@router.post("/api/contractors", response_model=schemas.Contractor)
+async def create_contractor_api(
+    contractor_data: schemas.ContractorCreate,
+    db: Session = Depends(get_db)
+):
+    """Tworzy nowego kontrahenta."""
+    return crud.get_or_create_contractor(db, name=contractor_data.name)
+
+@router.put("/costs/api/contractors/{contractor_id}", response_model=schemas.Contractor)
+async def update_contractor_api(
+    contractor_id: int,
+    contractor_data: schemas.ContractorCreate,
+    db: Session = Depends(get_db)
+):
+    """Aktualizuje istniejącego kontrahenta."""
+    updated_contractor = crud.update_contractor(db, contractor_id=contractor_id, contractor_data=contractor_data)
+    if not updated_contractor:
+        raise HTTPException(status_code=404, detail="Kontrahent nie znaleziony")
+    return updated_contractor
+
+@router.delete("/costs/api/contractors/{contractor_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_contractor_api(contractor_id: int, db: Session = Depends(get_db)):
+    """Usuwa istniejącego kontrahenta."""
+    success = crud.delete_contractor(db, contractor_id=contractor_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Kontrahent nie znaleziony")
+    return {"ok": True}
+
+@router.put("/costs/api/categories/{category_id}", response_model=schemas.ExpenseCategory)
+async def update_expense_category_api(
+    category_id: int,
+    category_data: schemas.ExpenseCategory,
+    db: Session = Depends(get_db)
+):
+    """Aktualizuje istniejącą kategorię kosztu."""
+    updated = crud.update_expense_category(db, category_id=category_id, category_data=category_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Kategoria nie znaleziona")
+    return updated
+
+@router.delete("/costs/api/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_expense_category_api(category_id: int, db: Session = Depends(get_db)):
+    """Usuwa istniejącą kategorię kosztu."""
+    success = crud.delete_expense_category(db, category_id=category_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Kategoria nie znaleziona")
+    return {"ok": True}

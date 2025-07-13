@@ -1,13 +1,24 @@
 import datetime
+from typing import Optional
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc # Importujemy desc do sortowania
 import app.services.models as models
+import app.services.schemas as schemas
 
 # --- Operacje CRUD dla Usług ---
-def get_services(db: Session):
-    return db.query(models.Service).options(
+def get_services(db: Session, start_date: Optional[datetime.date] = None, end_date: Optional[datetime.date] = None):
+    """Pobiera usługi, z opcjonalnym filtrowaniem po dacie i sortowaniem malejąco."""
+    query = db.query(models.Service).options(
         joinedload(models.Service.service_type).joinedload(models.ServiceType.category),
         joinedload(models.Service.service_type).joinedload(models.ServiceType.vat_rate)
-    ).all()
+    )
+    if start_date:
+        query = query.filter(models.Service.date >= start_date)
+    if end_date:
+        query = query.filter(models.Service.date <= end_date)
+
+    # Sortowanie od najnowszej do najstarszej
+    return query.order_by(desc(models.Service.date)).all()
 
 def create_service(db: Session, service_type_id: int, date: datetime.date, price: float):
     db_service = models.Service(
@@ -17,7 +28,7 @@ def create_service(db: Session, service_type_id: int, date: datetime.date, price
     )
     db.add(db_service)
     db.commit()
-    #db.refresh(db_service)
+    db.refresh(db_service)
 
     loaded_service = db.query(models.Service).options(
         joinedload(models.Service.service_type).joinedload(models.ServiceType.category)
@@ -28,10 +39,32 @@ def create_service(db: Session, service_type_id: int, date: datetime.date, price
         raise ValueError(f"ServiceType not loaded for service ID {loaded_service.id}")
     if not loaded_service.service_type.category:
         raise ValueError(f"ServiceCategory not loaded for ServiceType ID {loaded_service.service_type.id}")
-    if not loaded_service.service_type.vat_rate:
-        raise ValueError(f"VatRate not loaded for ServiceType ID {loaded_service.service_type.id}")
 
     return loaded_service
+
+def get_service(db: Session, service_id: int):
+    """Pobiera pojedynczą usługę o danym ID."""
+    return db.query(models.Service).filter(models.Service.id == service_id).first()
+
+def update_service(db: Session, service_id: int, data: schemas.ServiceCreate):
+    """Aktualizuje istniejącą usługę."""
+    db_service = get_service(db, service_id)
+    if db_service:
+        db_service.service_type_id = data.service_type_id
+        db_service.date = data.date
+        db_service.base_price_net = data.base_price_net
+        db.commit()
+        db.refresh(db_service)
+    return db_service
+
+def delete_service(db: Session, service_id: int):
+    """Usuwa usługę o podanym ID."""
+    db_service = get_service(db, service_id)
+    if db_service:
+        db.delete(db_service)
+        db.commit()
+        return True
+    return False
 
 # --- Operacje CRUD dla Kategorii ---
 def get_categories(db: Session):
@@ -80,3 +113,41 @@ def get_or_create_service_type(db: Session, name: str, category_id: int, vat_rat
         db.commit()
         db.refresh(service_type)
     return service_type
+
+def update_service_type(db: Session, type_id: int, data: models.ServiceType):
+    """Aktualizuje istniejący typ usługi."""
+    db_type = db.query(models.ServiceType).filter(models.ServiceType.id == type_id).first()
+    if db_type:
+        db_type.name = data.name
+        db_type.category_id = data.service_category_id
+        db_type.vat_rate_id = data.vat_rate_id
+        db.commit()
+        db.refresh(db_type)
+    return db_type
+
+def delete_service_type(db: Session, type_id: int):
+    """Usuwa typ usługi o podanym ID."""
+    db_type = db.query(models.ServiceType).filter(models.ServiceType.id == type_id).first()
+    if db_type:
+        db.delete(db_type)
+        db.commit()
+        return True
+    return False
+
+def update_category(db: Session, category_id: int, name: str):
+    """Aktualizuje nazwę istniejącej kategorii."""
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if db_category:
+        db_category.name = name
+        db.commit()
+        db.refresh(db_category)
+    return db_category
+
+def delete_category(db: Session, category_id: int):
+    """Usuwa kategorię o podanym ID."""
+    db_category = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if db_category:
+        db.delete(db_category)
+        db.commit()
+        return True
+    return False

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h2 class="page-header-title">Kategorie kosztów</h2>
+    </div>
+    <div class="page-header-right">
+        <button class="button primary-button" id="open-modal-btn">
+            <i class="ri-add-line"></i> Dodaj kategorię
+        </button>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="content-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nazwa kategorii</th>
+                    <th>Koszt podatkowy</th>
+                    <th style="width: 150px;">Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="list-tbody-categories">
+                <tr><td colspan="4">Ładowanie…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="category-modal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close-button">&times;</button>
+    <h3 id="modal-title">Dodaj nową kategorię</h3>
+    <form id="category-form">
+      <label for="category-name">Nazwa kategorii</label>
+      <input type="text" id="category-name" name="name" required>
+      
+      <label>
+        <input type="checkbox" id="is_tax_deductible" name="is_tax_deductible" checked>
+        Czy koszt jest podatkowy?
+      </label>
+
+      <button type="submit" class="primary-button" id="modal-submit-button">Dodaj</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Elementy DOM ---
+    const modal = document.getElementById('category-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalSubmitButton = document.getElementById('modal-submit-button');
+    const form = document.getElementById('category-form');
+    const tbody = document.getElementById('list-tbody-categories');
+    let currentEditId = null;
+
+    // --- Funkcje ---
+    async function loadCategories() {
+        tbody.innerHTML = '<tr><td colspan="4">Ładowanie…</td></tr>';
+        try {
+            const res = await fetch('/costs/api/categories');
+            if (!res.ok) throw new Error('Błąd pobierania danych');
+            const categories = await res.json();
+
+            tbody.innerHTML = categories.length ? categories.map(cat => `
+                <tr>
+                    <td>${cat.id}</td>
+                    <td>${cat.name}</td>
+                    <td>${cat.is_tax_deductible ? 'Tak' : 'Nie'}</td>
+                    <td>
+                        <button class="button-small edit-btn" data-id="${cat.id}">Edytuj</button>
+                        <button class="button-small delete-btn" data-id="${cat.id}" data-name="${cat.name}">Usuń</button>
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="4">Brak kategorii.</td></tr>';
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    function setupModal(isEditing, data = {}) {
+        currentEditId = isEditing ? data.id : null;
+        modalTitle.textContent = isEditing ? 'Edytuj kategorię' : 'Dodaj nową kategorię';
+        modalSubmitButton.textContent = isEditing ? 'Zapisz zmiany' : 'Dodaj';
+        form.elements.name.value = data.name || '';
+        form.elements.is_tax_deductible.checked = isEditing ? data.is_tax_deductible : true;
+        modal.classList.add('active');
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('open-modal-btn').addEventListener('click', () => setupModal(false));
+    modal.querySelector('.modal-close-button').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', e => (e.target === modal) && modal.classList.remove('active'));
+
+    tbody.addEventListener('click', async e => {
+        const target = e.target;
+        const id = target.dataset.id;
+        if (!id) return;
+
+        if (target.classList.contains('edit-btn')) {
+            const res = await fetch('/costs/api/categories');
+            const categories = await res.json();
+            const categoryData = categories.find(c => c.id == id);
+            if (categoryData) setupModal(true, categoryData);
+        }
+
+        if (target.classList.contains('delete-btn')) {
+            if (confirm(`Czy na pewno chcesz usunąć kategorię "${target.dataset.name}"?`)) {
+                const res = await fetch(`/costs/api/categories/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Kategoria usunięta!', 'success');
+                    loadCategories();
+                } else {
+                    showToast('Błąd usuwania', 'error');
+                }
+            }
+        }
+    });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+
+        // Logika jest teraz połączona i poprawna
+        const isEditing = currentEditId !== null;
+        let payload;
+
+        if (isEditing) {
+            // Przy edycji wysyłamy ID
+            payload = {
+                id: currentEditId,
+                name: form.elements.name.value,
+                is_tax_deductible: form.elements.is_tax_deductible.checked
+            };
+        } else {
+            // Przy dodawaniu NIE wysyłamy ID
+            payload = {
+                name: form.elements.name.value,
+                is_tax_deductible: form.elements.is_tax_deductible.checked
+            };
+        }
+
+        const url = isEditing ? `/costs/api/categories/${currentEditId}` : '/costs/api/categories';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error((await res.json()).detail || 'Błąd zapisu');
+            showToast(isEditing ? 'Kategoria zaktualizowana!' : 'Kategoria dodana!', 'success');
+            modal.classList.remove('active');
+            loadCategories();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // --- Start ---
+    loadCategories();
+});
+</script>
+{% endblock %}

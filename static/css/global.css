@@ -1,84 +1,84 @@
-/* General body and root layout styles */
-:root {
-    --pico-font-family: 'Inter', 'Arial', sans-serif; /* Możesz wybrać inną czcionkę */
-    --primary: #FFD700; /* Złoty (primary gold) */
-    --secondary: #DAA520; /* Ciemniejszy złoty */
-    --bg-dark: #1a1a1a; /* Głębokie tło */
-    --text-color: #F0E68C; /* Jasny złoty dla tekstu */
-    --card-bg: #2a2a2a; /* Tło kart/artykułów */
-    --border-color: #444444; /* Kolor linii/ramki */
-    --sidebar-bg: #0d0d0d; /* Bardzo ciemne tło sidebar */
-    --topbar-bg: #0d0d0d; /* Bardzo ciemne tło topbar */
-    --active-item-bg: rgba(255, 215, 0, 0.1); /* Lekko przezroczyste złote tło dla aktywnych elementów */
-    --hover-item-bg: rgba(255, 215, 0, 0.05); /* Lekko przezroczyste złote tło dla najechania */
-    --input-bg: #333333; /* Tło pól input */
-    --input-border: #555555; /* Ramka pól input */
-    --text-light-grey: #bbbbbb; /* Jasnoszary tekst */
+/* Plik: static/css/global.css */
 
-    /* PicoCSS overrides for dark theme */
-    --pico-background-color: var(--bg-dark);
-    --pico-color: var(--text-color);
-    --pico-form-element-background-color: var(--input-bg);
-    --pico-form-element-color: var(--text-color);
-    --pico-form-element-border-color: var(--input-border);
-    --pico-form-element-active-border-color: var(--primary);
-    --pico-link-color: var(--primary);
-    --pico-h1-color: var(--primary);
-    --pico-h2-color: var(--primary);
-    --pico-h3-color: var(--primary);
-    --pico-h4-color: var(--primary);
-    --pico-button-background-color: var(--primary);
-    --pico-button-color: var(--bg-dark);
-    --pico-button-hover-background-color: var(--secondary);
-    --pico-button-hover-color: var(--bg-dark);
-    --pico-card-background-color: var(--card-bg);
+:root {
+    --pico-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+    /* === PALETA BARW (Light Mode) - na podstawie pierwszego screenshota === */
+    --primary: #5D5FEF;       /* Główny fioletowo-niebieski akcent */
+    --primary-hover: #4a4de1;  /* Ciemniejszy odcień do hover */
+    --primary-light: rgba(93, 95, 239, 0.1); /* Jasny odcień tła dla aktywnych elementów */
+
+    /* Tła */
+    --bg-main: #F8F8FA;        /* Główne, bardzo jasne szare tło aplikacji */
+    --bg-card: #FFFFFF;        /* Białe tło dla kart, sidebara, modali */
+
+    /* Tekst */
+    --text-primary: #2D3748;   /* Główny, ciemnoszary kolor tekstu */
+    --text-secondary: #718096; /* Jaśniejszy szary dla opisów i nieaktywnych linków */
+    --text-on-primary: #FFFFFF;/* Biały tekst na przyciskach z głównym tłem */
+
+    /* Ramki i separatory */
+    --border-color: #E2E8F0;   /* Bardzo jasna ramka */
+
+    /* Elementy formularzy */
+    --input-bg: #FFFFFF;
+    --input-border: #E2E8F0;
+    --input-focus-border: var(--primary);
+
+    /* === NADPISANIE ZMIENNYCH PICO.CSS === */
+
+    --pico-background-color: var(--bg-main);
+    --pico-color: var(--text-primary);
+    --pico-h1-color: var(--text-primary);
+    --pico-h2-color: var(--text-primary);
+    --pico-h3-color: var(--text-primary);
+    --pico-card-background-color: var(--bg-card);
     --pico-card-border-color: var(--border-color);
-    --pico-table-border-color: var(--border-color);
-    --pico-table-row-hover-background-color: var(--hover-item-bg);
+    --pico-form-element-background-color: var(--input-bg);
+    --pico-form-element-border-color: var(--input-border);
+    --pico-form-element-focus-color: var(--primary);
+    --pico-button-background-color: var(--primary);
+    --pico-button-hover-background-color: var(--primary-hover);
+    --pico-button-color: var(--text-on-primary);
+    --pico-font-size: 15px;
+    --pico-border-radius: 8px;
+    
 }
 
 body {
     margin: 0;
     font-family: var(--pico-font-family);
-    background-color: var(--bg-dark);
-    color: var(--text-color);
-    overflow: hidden; /* Zapobiega przewijaniu całego body, kontrolujemy przewijanie w main-content */
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    overflow: hidden;
 }
 
-/* App Layout - Grid */
+/* Układ aplikacji */
 .app-layout {
     display: grid;
-    grid-template-columns: 250px 1fr; /* Stała szerokość sidebar i reszta dla contentu */
-    grid-template-rows: auto 1fr; /* Górny pasek i reszta dla głównej zawartości */
-    height: 100vh; /* Pełna wysokość viewportu */
-    overflow: hidden; /* Kontroluje przewijanie na poziomie głównym */
+    grid-template-columns: 240px 1fr; /* Stała szerokość sidebara */
+    height: 100vh;
 }
 
-/* Sidebar */
+/* Panel Boczny (Sidebar) */
 .sidebar {
     grid-column: 1 / 2;
-    grid-row: 1 / 3; /* Zajmuje całą wysokość */
-    background-color: var(--sidebar-bg);
-    color: var(--text-color);
+    background-color: var(--bg-card); /* Białe tło */
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    padding: 1rem 0;
-    border-right: 1px solid var(--border-color);
-    overflow-y: auto; /* Przewijanie tylko dla sidebara */
+    padding: 1.5rem 0;
 }
 
 .sidebar-header {
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
+    padding: 0 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .sidebar-header .project-name {
-    font-size: 1.4rem;
-    margin: 0;
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 .sidebar-nav ul {
@@ -87,189 +87,104 @@ body {
     margin: 0;
 }
 
-.sidebar-nav ul li {
-    margin-bottom: 0.2rem;
-}
-
 .sidebar-nav .sidebar-link {
     display: flex;
     align-items: center;
-    padding: 0.8rem 1.5rem;
-    color: var(--text-color);
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    border-radius: 0 50px 50px 0; /* Zaokrąglenie tylko z prawej */
-    margin-right: 1rem;
     gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    margin: 0 1rem 0.25rem 0; /* Margines tylko z prawej */
+    border-radius: 0 12px 12px 0; /* Zaokrąglenie tylko z prawej */
+    color: var(--text-secondary); /* Domyślnie szary */
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
 }
 
 .sidebar-nav .sidebar-link i {
     font-size: 1.2rem;
+    color: var(--text-secondary);
+    transition: color 0.2s;
 }
 
 .sidebar-nav .sidebar-link.active {
-    background-color: var(--active-item-bg);
-    color: var(--primary);
-    font-weight: bold;
-}
-
-.sidebar-nav .sidebar-link:hover:not(.active) {
-    background-color: var(--hover-item-bg);
-    color: var(--primary);
-}
-
-/* Submenu styles */
-.sidebar-nav .has-submenu .submenu-toggle .arrow-icon {
-    margin-left: auto; /* Wypycha ikonę strzałki na prawo */
-    transition: transform 0.2s ease;
-}
-
-.sidebar-nav .has-submenu.active .submenu-toggle .arrow-icon {
-    transform: rotate(-180deg); /* Obraca strzałkę, gdy submenu jest aktywne */
-}
-
-.sidebar-nav .submenu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow: hidden; /* Ukrywa zawartość, gdy nieaktywne */
-    max-height: 0; /* Zamyka submenu */
-    transition: max-height 0.3s ease-in-out;
-}
-
-.sidebar-nav .has-submenu.active .submenu {
-    max-height: 500px; /* Otwiera submenu (wartość musi być wystarczająco duża) */
-}
-
-.sidebar-nav .submenu li a {
-    padding: 0.6rem 1.5rem 0.6rem 3rem; /* Wcięcie dla elementów submenu */
-    font-size: 0.9rem;
-    color: var(--text-light-grey);
-    border-radius: 0; /* Brak zaokrągleń */
-}
-
-.sidebar-nav .submenu li a:hover:not(.active) {
-    background-color: var(--hover-item-bg);
-    color: var(--primary);
-}
-.sidebar-nav .submenu li a.active {
-    background-color: var(--active-item-bg);
-    color: var(--primary);
-    font-weight: normal; /* Nieco mniej pogrubiony niż główny link */
-}
-
-
-.sidebar-footer {
-    margin-top: auto; /* Wypycha stopkę na dół sidebara */
-    padding: 1rem 1.5rem;
-    font-size: 0.8rem;
-    color: var(--text-light-grey);
-    border-top: 1px solid var(--border-color);
-}
-
-/* Main Content Area */
-.main-content {
-    grid-column: 2 / 3;
-    grid-row: 1 / 3;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--bg-dark);
-    overflow-y: auto; /* Przewijanie tylko dla głównej zawartości */
-}
-
-/* Top Bar */
-.top-bar {
-    background-color: var(--topbar-bg);
-    padding: 1rem 2rem;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky; /* Przykładowo, jeśli ma być zawsze na górze */
-    top: 0;
-    z-index: 100; /* Upewnia się, że jest nad przewijaną zawartością */
-}
-
-.top-bar-left .page-title {
-    font-size: 1.8rem;
-    color: var(--text-color);
-    margin: 0;
+    background-color: var(--primary);
+    color: var(--text-on-primary); /* Biały tekst */
     font-weight: 600;
 }
 
-.top-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+.sidebar-nav .sidebar-link.active i {
+    color: var(--text-on-primary);
 }
 
-.top-bar-icon-button {
-    background: none;
-    border: none;
-    color: var(--text-light-grey);
-    font-size: 1.5rem;
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.top-bar-icon-button:hover {
+.sidebar-nav .sidebar-link:hover:not(.active) {
     color: var(--primary);
 }
 
-.user-profile {
+.sidebar-nav .sidebar-link:hover:not(.active) i {
+    color: var(--primary);
+}
+
+/* Poprawka wcięcia dla podmenu w panelu bocznym */
+.sidebar-nav .submenu {
+     list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0.5rem 1rem; /* Margines dla wcięcia */
+    border-left: 3px solid var(--border-color); /* Linia wizualna */
+    padding-left: 1rem; /* Dodatkowe wcięcie tekstu */
+
+    /* --- Kluczowe linijki do ukrywania menu --- */
+    overflow: hidden;
+    max-height: 0; /* Domyślnie menu jest zwinięte */
+    transition: max-height 0.3s ease-in-out;
+}
+
+/* Lekka korekta, aby linki w podmenu nie miały podwójnego wcięcia */
+.sidebar-nav .submenu li a {
+    padding-left: 1rem;
+}
+
+.sidebar-nav .has-submenu.active > .submenu {
+    max-height: 500px; /* WAŻNE: Pokazuje menu, gdy rodzic ma klasę .active. 500px to bezpieczna, duża wartość. */
+}
+
+/* Główna zawartość */
+.main-content {
+    grid-column: 2 / 3;
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
-.user-profile .user-avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--primary);
+/* Górny pasek */
+.top-bar {
+    background-color: var(--bg-card); /* Białe tło */
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
-.user-profile .user-name {
-    color: var(--text-color);
-    font-weight: 500;
-    font-size: 0.95rem;
-    display: none; /* Domyślnie ukryj nazwę użytkownika na mniejszych ekranach */
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
 }
 
-@media (min-width: 992px) { /* Pokaż nazwę użytkownika na większych ekranach */
-    .user-profile .user-name {
-        display: inline;
-    }
-}
-
-
-/* Content Area - where actual page content goes */
+/* Obszar z treścią */
 .content-area {
     padding: 2rem;
-    flex-grow: 1; /* Wypełnia dostępną przestrzeń */
+    flex-grow: 1;
 }
 
-/* General overrides for Pico.css elements within content-area */
-.container { /* Stary container jest teraz zawartością content-area, możesz go usunąć lub dostosować */
-    padding: 0; /* Padding jest już w content-area */
-    background-color: transparent; /* Kontener będzie przezroczysty, karty będą miały tło */
-    box-shadow: none;
-    border: none;
-}
-
-/* Article/Card styles - now more like CRM cards */
-article.card { /* Używamy article.card, aby nie nadpisywać innych article, jeśli takie są */
-    background-color: var(--card-bg);
+/* Karty */
+article, .card {
+    background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 10px; /* Bardziej zaokrąglone rogi */
-    padding: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); /* Wyraźniejszy cień */
-    color: var(--text-color);
-    margin-bottom: 20px; /* Odstęp między kartami */
-    display: flex; /* Użycie flexbox dla lepszej kontroli nad układem wewnątrz karty */
-    flex-direction: column;
+    border-radius: var(--pico-border-radius);
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
 }
 
 .card-header {
@@ -277,292 +192,331 @@ article.card { /* Używamy article.card, aby nie nadpisywać innych article, je�
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    padding-bottom: 10px; /* Separator */
+    padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
 }
 
 .card-header h3 {
     margin: 0;
-    color: var(--primary);
-    font-size: 1.5rem;
+    font-size: 1.25rem;
 }
 
-/* Primary Button style - for actions like "Dodaj nową usługę" */
-.primary-button {
+/* Przyciski */
+.primary-button, button[type="submit"] {
     background-color: var(--primary);
-    color: var(--bg-dark);
+    color: var(--text-on-primary);
     border: none;
-    padding: 0.8rem 1.5rem;
-    border-radius: 8px; /* Bardziej zaokrąglone niż domyślne */
-    cursor: pointer;
     font-weight: 600;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--pico-border-radius);
 }
 
-.primary-button:hover {
-    background-color: var(--secondary);
-    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+.primary-button:hover, button[type="submit"]:hover {
+    background-color: var(--primary-hover);
+    color: var(--text-on-primary);
 }
 
-/* Status Badges */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.3em 0.7em;
-    border-radius: 15px;
-    font-size: 0.75em;
-    font-weight: bold;
-    text-transform: uppercase;
-    white-space: nowrap;
+/* Formularze */
+label {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
 }
 
-.status-paid {
-    background-color: rgba(76, 175, 80, 0.2); /* Zielony z przezroczystością */
-    color: #4CAF50;
+input, select, textarea {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--pico-border-radius);
+    padding: 0.6rem 0.8rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.status-unpaid {
-    background-color: rgba(255, 87, 34, 0.2); /* Pomarańczowy z przezroczystością */
-    color: #FF5722;
+input:focus, select:focus, textarea:focus {
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 3px rgba(93, 95, 239, 0.2);
 }
 
-.status-transferred {
-    background-color: rgba(33, 150, 243, 0.2); /* Niebieski z przezroczystością */
-    color: #2196F3;
-}
-
-.status-not-transferred {
-    background-color: rgba(158, 158, 158, 0.2); /* Szary z przezroczystością */
-    color: #9E9E9E;
-}
-
-/* Modal styles */
-.modal-overlay {
-    display: none; /* Ukryj modal domyślnie */
-    position: fixed; /* Pozostaw fixed, aby zasłaniał całą stronę */
-    top: 0;
-    left: 0;
+/* Tabele */
+.table-responsive {
+    overflow-x: auto;
     width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); /* Przyciemnienie tła */
-    justify-content: center; /* Wyśrodkowanie w pionie i poziomie */
-    align-items: center; /* Wyśrodkowanie w pionie i poziomie */
-    z-index: 1000; /* Upewnij się, że jest na wierzchu */
 }
 
-.modal-overlay.active { /* Dodajemy klasę 'active' do pokazywania modala */
+table {
+    width: 100%;
+    border-collapse: collapse; /* Łączy ramki komórek w jedną linię */
+    background-color: transparent; /* Tło pochodzi z nadrzędnej karty */
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+th, td {
+    padding: 0.85rem 1rem; /* Spójny, czytelny padding */
+    text-align: left;
+    border: none; /* Resetujemy domyślne ramki */
+    white-space: nowrap; /* Zapobiega łamaniu tekstu w komórkach */
+}
+
+/* Nagłówek tabeli */
+thead {
+    /* Używamy tła głównego, aby lekko odróżnić nagłówek */
+    background-color: var(--bg-main);
+}
+
+th {
+    font-weight: 600;
+    color: var(--text-secondary); /* Szary, mniej ważny tekst */
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    /* Grubsza linia pod nagłówkiem dla wyraźnego oddzielenia */
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* KLUCZOWA POPRAWKA: Reset tła dla komórek danych */
+td {
+    background-color: transparent; /* Ustawiamy tło komórek na przezroczyste */
+    color: var(--text-primary); /* Upewniamy się, że tekst jest ciemny */
+}
+
+/* Wiersze w ciele tabeli */
+tbody tr {
+    /* Cienka linia oddzielająca każdy wiersz */
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+/* Usuwamy linię pod ostatnim wierszem dla czystszego wyglądu */
+tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* Efekt najechania myszą na wiersz */
+tbody tr:hover {
+    background-color: var(--bg-main); /* Podświetlenie wiersza na kolor tła aplikacji */
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(45, 55, 72, 0.7); /* Półprzezroczysty ciemny szary */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.active {
     display: flex;
 }
 
 .modal-content {
-    background-color: var(--card-bg); /* Tło modala jak karty */
+    background-color: var(--bg-card);
     padding: 2rem;
-    border-radius: 10px;
-    border: 1px solid var(--primary); /* Złota ramka */
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-    position: relative;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     max-width: 500px;
-    width: 90%; /* Responsywna szerokość */
-    color: var(--text-color);
-}
-
-.modal-content h3 {
-    color: var(--primary);
-    text-align: center;
-    margin-bottom: 2rem;
+    width: 90%;
 }
 
 .modal-close-button {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 1.8rem;
+    top: 1rem; right: 1rem;
+    background: none; border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
     cursor: pointer;
-    color: var(--text-light-grey);
-    line-height: 1;
-    padding: 0;
-    transition: color 0.2s ease;
-}
-.modal-close-button:hover {
-    color: var(--primary);
 }
 
-/* Form element styles within modals/cards */
-label {
-    color: var(--text-color);
-    margin-bottom: 0.5rem;
-    display: block;
-    font-weight: 500;
+/* Powiadomienia Toast */
+#toast-container {
+    position: fixed;
+    top: 1rem; right: 1rem;
+    z-index: 9999;
 }
 
-input[type="text"],
-input[type="number"],
-input[type="date"],
-select {
-    width: 100%;
-    padding: 0.8rem;
-    margin-bottom: 1rem;
-    border: 1px solid var(--input-border);
-    border-radius: 5px;
-    background-color: var(--input-bg);
-    color: var(--text-color);
-    box-sizing: border-box; /* Ważne dla prawidłowej szerokości */
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+.toast {
+    color: #fff;
+    padding: 0.8rem 1.2rem;
+    margin-top: 0.5rem;
+    border-radius: var(--pico-border-radius);
+    font-size: 0.9rem;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3);
-    outline: none;
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
 }
 
-/* Table responsiveness */
-.table-responsive {
-    overflow-x: auto; /* Włącza przewijanie poziome */
-    width: 100%; /* Zajmuje całą szerokość rodzica */
-    -webkit-overflow-scrolling: touch; /* Dla płynniejszego przewijania na iOS */
-    padding-bottom: 10px; /* Przestrzeń pod scrollbar */
-    box-sizing: border-box;
-    min-height: 50px; /* Minimalna wysokość, nawet jeśli tabela jest pusta */
+.toast.success {
+    background-color: #28a745; /* Zielony */
 }
 
-/* Table styles for minimalist CRM look */
-table {
-    border: none; /* Usuwamy główne obramowanie tabeli */
-    border-collapse: separate; /* Aby działało border-radius na tbody tr */
-    border-spacing: 0 0.5rem; /* Odstęp między wierszami */
-    width: max-content; /* Sprawia, że tabela jest tak szeroka, jak jej zawartość */
-    min-width: 100%; /* Upewnia się, że tabela nigdy nie jest węższa niż 100% rodzica */
-    background-color: transparent; /* Tabela nie ma tła, tylko wiersze/komórki */
-    margin-top: 0; /* Reset domyślnego marginesu */
-    color: var(--text-color); /* Domyślny kolor tekstu w tabeli */
+.toast.error {
+    background-color: #dc3545; /* Czerwony */
 }
 
-th {
-    background-color: transparent; /* Nagłówki przezroczyste */
-    color: var(--text-light-grey); /* Jasnoszary tekst nagłówków */
-    font-weight: 600;
-    padding: 1rem 0.8rem;
-    border-bottom: 1px solid var(--border-color); /* Tylko dolna linia */
-    border-top: none; /* Upewnij się, że nie ma górnej ramki */
-    border-left: none; /* Upewnij się, że nie ma lewej ramki */
-    border-right: none; /* Upewnij się, że nie ma prawej ramki */
-    text-transform: uppercase;
-    font-size: 0.85em;
-    white-space: nowrap; /* Nagłówki nie zawijają tekstu, wymuszają szerokość kolumny */
-}
 
-td {
-    padding: 0.8rem;
-    background-color: var(--card-bg); /* Tło dla komórek danych */
-    border: none; /* Brak obramowań dla komórek */
-    border-bottom: 1px solid var(--border-color); /* Cienka linia pod każdym wierszem */
-    word-wrap: break-word; /* Długa treść może się zawijać */
-    white-space: normal; /* Normalne zawijanie tekstu w komórkach */
-    box-sizing: border-box; /* Ważne dla szerokości */
-}
-
-/* Minimalne szerokości dla kolumn, aby były czytelne */
-th:nth-child(1), td:nth-child(1) { min-width: 100px; } /* Nr FV / Data */
-th:nth-child(2), td:nth-child(2) { min-width: 120px; } /* Data FV / Nazwa kosztu */
-th:nth-child(3), td:nth-child(3) { min-width: 100px; } /* Kwota Netto / Kategoria */
-th:nth-child(4), td:nth-child(4) { min-width: 110px; } /* Kwota Brutto / Cena netto */
-th:nth-child(5), td:nth-child(5) { min-width: 150px; } /* Konto / VAT (%) */
-th:nth-child(6), td:nth-child(6) { min-width: 150px; } /* Kategoria / Cena brutto */
-th:nth-child(7), td:nth-child(7) { min-width: 120px; } /* Status płatności */
-th:nth-child(8), td:nth-child(8) { min-width: 120px; } /* Status księgowy */
-th:nth-child(9), td:nth-child(9) { min-width: 200px; } /* Akcje - wymaga więcej miejsca na dwa przyciski */
-
-/* Aktywne wiersze tabeli - styl z przykładu CRM */
-tbody tr {
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
-    border-radius: 8px; /* Zaokrąglone rogi dla każdego wiersza */
-    overflow: hidden; /* Ważne, aby zaokrąglenia były widoczne */
-}
-
-tbody tr:hover {
-    background-color: var(--hover-item-bg);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Zaokrąglanie narożników dla pierwszych i ostatnich komórek w wierszu */
-/* Ważne: działa tylko przy border-collapse: separate; */
-tbody tr td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
-tbody tr td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
-
-/* Styles for small action buttons inside table cells */
-.button-small {
-    background-color: transparent; /* Przycisk jest przezroczysty */
-    color: var(--primary); /* Złoty kolor tekstu/ikon */
-    border: 1px solid var(--primary); /* Złota ramka */
-    padding: 4px 6px; /* Zmniejszony padding */
-    font-size: 0.7em; /* Mniejsza czcionka */
-    margin: 1px; /* Zmniejszony margines */
-    cursor: pointer;
-    border-radius: 5px; /* Delikatne zaokrąglenia */
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    display: inline-flex;
+/* Nagłówek strony (tytuł, przyciski, wyszukiwarka) */
+.page-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.25rem; /* Mała przerwa między ikoną a tekstem */
-    white-space: nowrap; /* Zapobiega łamaniu tekstu w przycisku */
-    box-sizing: border-box;
-}
-
-.button-small i {
-    font-size: 0.9em; /* Dostosowanie rozmiaru ikony */
-}
-
-.button-small:hover {
-    background-color: var(--primary);
-    color: var(--bg-dark); /* Tekst staje się ciemny na złotym tle */
-}
-
-/* Specjalne style dla button-small w zależności od akcji, jeśli chcesz je zróżnicować */
-.button-small.button-paid { /* Przyciski związane z płatnością */
-    border-color: #4CAF50; /* Zielona ramka */
-    color: #4CAF50;
-}
-.button-small.button-paid:hover {
-    background-color: #4CAF50;
-    color: var(--bg-dark);
-}
-
-.button-small.button-accountant { /* Przyciski związane z księgowością */
-    border-color: #2196F3; /* Niebieska ramka */
-    color: #2196F3;
-}
-.button-small.button-accountant:hover {
-    background-color: #2196F3;
-    color: var(--bg-dark);
-}
-
-/* Styles for page-header-title */
-.page-header-title {
-    color: var(--primary);
-    font-size: 2rem;
     margin-bottom: 2rem;
-    font-weight: 700;
 }
 
-/* Grid layout for multiple cards in content-area */
-.grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-    margin-top: 0;
+.page-header-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
 }
 
-@media (min-width: 768px) {
-    .grid {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
+.page-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Wyszukiwarka */
+.search-wrapper {
+    position: relative;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+.search-input {
+    padding-left: 2.5rem; /* Robi miejsce na ikonę */
+    width: 250px; /* Stała szerokość */
+    border-radius: var(--pico-border-radius);
+}
+
+/* Kontener na treść (np. tabelę), który wygląda jak karta */
+.content-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px; /* Większe zaokrąglenie */
+    padding: 0.5rem 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Nowy, czysty wygląd tabel */
+.content-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.content-table th, .content-table td {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    border: none;
+}
+
+.content-table thead {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.content-table th {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: none; /* Bez wielkich liter */
+}
+
+.content-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.content-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.content-table tbody tr:hover {
+    background-color: var(--bg-main);
+}
+
+/* Ustawia tło i kolor tekstu dla wszystkich komórek w nagłówku */
+.content-table thead th {
+    background-color: var(--bg-main); /* Ustawia delikatnie szare tło (to samo co tło strony) */
+    color: var(--text-secondary);
+}
+
+/* Zaokrąglenie lewego górnego rogu (tylko pierwszej komórki nagłówka) */
+.content-table thead th:first-child {
+    border-top-left-radius: 12px; /* Używamy tego samego zaokrąglenia co w .content-card */
+}
+
+/* Zaokrąglenie prawego górnego rogu (tylko ostatniej komórki nagłówka) */
+.content-table thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+input,
+select,
+textarea {
+    color: var(--text-primary); /* Używamy głównego, ciemnego koloru tekstu z Twojej palety */
+}
+
+.page-title {
+    color: var(--text-primary);
+}
+
+.row-unpaid {
+    background-color: rgba(220, 53, 69, 0.07) !important; /* Delikatne czerwone tło */
+}
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: transparent;
+  margin: 0;
+  
+  font: inherit;
+  color: currentColor;
+  width: 1.15em;
+  height: 1.15em;
+  border: 0.15em solid var(--input-border);
+  border-radius: 0.25em;
+  transform: translateY(-0.075em);
+  
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  margin-right: 0.5em;
+}
+
+/* Tworzymy "ptaszka" (checkmark) wewnątrz, domyślnie niewidocznego */
+input[type="checkbox"]::before {
+  content: "";
+  width: 0.65em;
+  height: 0.65em;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em var(--text-on-primary); /* Kolor ptaszka */
+  
+  /* Magia do stworzenia kształtu 'V' */
+  transform-origin: bottom left;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+/* Gdy checkbox jest zaznaczony... */
+input[type="checkbox"]:checked {
+  background-color: var(--primary); /* Wypełniamy go fioletowym kolorem */
+  border-color: var(--primary);
+}
+
+/* ...pokazujemy "ptaszka" */
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
 }

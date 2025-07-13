@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles # Import do obsługi plików statycznych
+from fastapi.exceptions import ResponseValidationError
+from fastapi.responses import JSONResponse
 
 # Importujemy funkcję uruchomienia bazy danych i początkowych danych
 from app.core.startup import run_startup_event
@@ -46,3 +48,15 @@ async def invoices_page(request: Request):
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request, "title": "Ustawienia"})
+
+@app.exception_handler(ResponseValidationError)
+async def response_validation_exception_handler(request, exc: ResponseValidationError):
+    # pokaż w body dokładnie, czego brakuje
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Invalid response schema",
+            "details": exc.errors(),
+            "body": exc.body
+        }
+    )

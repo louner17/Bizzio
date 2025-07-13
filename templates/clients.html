@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+  <h2 class="page-header-title">Rejestr Klientów</h2>
+</header>
+
+<div class="grid">
+    <article class="card">
+        <div class="card-header">
+            <h3>Lista klientów</h3>
+            <button class="button primary-button">
+                <i class="ri-add-line"></i> Dodaj klienta
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Imię i Nazwisko</th>
+                        <th>Telefon</th>
+                        <th>Email</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4">Funkcjonalność w trakcie budowy.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </article>
+</div>
+{% endblock %}

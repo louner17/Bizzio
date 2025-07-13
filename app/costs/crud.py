@@ -1,6 +1,8 @@
 import datetime
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc
 import app.costs.models as models
+import app.costs.schemas as schemas
 
 # --- Operacje CRUD dla Kontrahentów ---
 def get_contractors(db: Session):
@@ -33,32 +35,26 @@ def get_expenses(db: Session):
     return db.query(models.Expense).options(
         joinedload(models.Expense.contractor),
         joinedload(models.Expense.category)
-    ).all()
+    ).order_by(desc(models.Expense.invoice_date)).all()
 
-def create_expense(
-    db: Session,
-    invoice_number: str,
-    invoice_date: datetime.date,
-    description: str,
-    amount_net: float,
-    amount_gross: float,
-    currency: str,
-    due_date: datetime.date,
-    contractor_id: int,
-    category_id: int,
-    attachment_path: str = None
-):
+
+def create_expense(db: Session, expense_data: schemas.ExpenseCreate, attachment_path: str = None):
+    # Logika "znajdź lub stwórz" dla kontrahenta
+    contractor = get_or_create_contractor(db, name=expense_data.contractor_name)
+
     db_expense = models.Expense(
-        invoice_number=invoice_number,
-        invoice_date=invoice_date,
-        description=description,
-        amount_net=amount_net,
-        amount_gross=amount_gross,
-        currency=currency,
-        due_date=due_date,
-        contractor_id=contractor_id,
-        category_id=category_id,
-        attachment_path=attachment_path
+        invoice_number=expense_data.invoice_number,
+        invoice_date=expense_data.invoice_date,
+        description=expense_data.description,
+        amount_net=expense_data.amount_net,
+        amount_gross=expense_data.amount_gross,
+        currency=expense_data.currency,
+        due_date=expense_data.due_date,
+        contractor_id=contractor.id,
+        category_id=expense_data.category_id,
+        attachment_path=attachment_path,
+        is_paid=expense_data.is_paid or False,
+        payment_date=expense_data.payment_date if expense_data.is_paid else None
     )
     db.add(db_expense)
     db.commit()
@@ -68,20 +64,22 @@ def create_expense(
 def get_expense(db: Session, expense_id: int):
     return db.query(models.Expense).filter(models.Expense.id == expense_id).first()
 
-def update_expense_payment_status(db: Session, expense_id: int, payment_date: datetime.date):
-    expense = get_expense(db, expense_id)
-    if expense:
-        expense.payment_date = payment_date
-        expense.is_paid = True
+def update_expense(db: Session, expense_id: int, expense_data: schemas.ExpenseUpdate):
+    db_expense = get_expense(db, expense_id)
+    if db_expense:
+        # Aktualizacja pól
+        for var, value in vars(expense_data).items():
+            setattr(db_expense, var, value) if value else None
         db.commit()
-        db.refresh(expense)
-    return expense
+        db.refresh(db_expense)
+    return db_expense
 
-def update_expense_accountant_status(db: Session, expense_id: int, transferred_date: datetime.date):
-    expense = get_expense(db, expense_id)
+def update_expense_payment_status(db: Session, expense_id: int, payment_date: datetime.date):
+    """Oznacza koszt jako opłacony w danym dniu."""
+    expense = get_expense(db, expense_id) # Używamy istniejącej funkcji get_expense
     if expense:
-        expense.transferred_to_accountant_date = transferred_date
-        expense.is_transferred_to_accountant = True
+        expense.is_paid = True
+        expense.payment_date = payment_date
         db.commit()
         db.refresh(expense)
     return expense
@@ -90,6 +88,46 @@ def delete_expense(db: Session, expense_id: int):
     expense = get_expense(db, expense_id)
     if expense:
         db.delete(expense)
+        db.commit()
+        return True
+    return False
+
+def update_contractor(db: Session, contractor_id: int, contractor_data: schemas.ContractorCreate):
+    """Aktualizuje dane istniejącego kontrahenta."""
+    db_contractor = db.query(models.Contractor).filter(models.Contractor.id == contractor_id).first()
+    if db_contractor:
+        db_contractor.name = contractor_data.name
+        db_contractor.bank_account_number = contractor_data.bank_account_number
+        db_contractor.is_recurring = contractor_data.is_recurring
+        db.commit()
+        db.refresh(db_contractor)
+    return db_contractor
+
+def delete_contractor(db: Session, contractor_id: int):
+    """Usuwa kontrahenta o podanym ID."""
+    db_contractor = db.query(models.Contractor).filter(models.Contractor.id == contractor_id).first()
+    if db_contractor:
+        db.delete(db_contractor)
+        db.commit()
+        return True
+    return False
+
+def update_expense_category(db: Session, category_id: int, category_data: schemas.ExpenseCategory):
+    """Aktualizuje kategorię kosztu."""
+    db_category = db.query(models.ExpenseCategory).filter(models.ExpenseCategory.id == category_id).first()
+    if db_category:
+        db_category.name = category_data.name
+        # --- DODANA LINIA DO AKTUALIZACJI STANU CHECKBOXA ---
+        db_category.is_tax_deductible = category_data.is_tax_deductible
+        db.commit()
+        db.refresh(db_category)
+    return db_category
+
+def delete_expense_category(db: Session, category_id: int):
+    """Usuwa kategorię kosztu."""
+    db_category = db.query(models.ExpenseCategory).filter(models.ExpenseCategory.id == category_id).first()
+    if db_category:
+        db.delete(db_category)
         db.commit()
         return True
     return False

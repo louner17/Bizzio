@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h2 class="page-header-title"></h2>
+    </div>
+    <div class="page-header-right">
+        <button class="button primary-button" id="open-modal-btn">
+            <i class="ri-add-line"></i> Dodaj kontrahenta
+        </button>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="content-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nazwa kontrahenta</th>
+                    <th>Numer konta</th>
+                    <th>Płatności cykliczne</th>
+                    <th style="width: 150px;">Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="list-tbody-contractors">
+                <tr><td colspan="5">Ładowanie…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="contractor-modal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close-button">&times;</button>
+    <h3 id="modal-title">Dodaj nowego kontrahenta</h3>
+    <form id="contractor-form">
+      <label for="contractor-name">Nazwa kontrahenta</label>
+      <input type="text" id="contractor-name" name="name" required>
+
+      <label for="bank_account_number">Numer konta bankowego</label>
+      <input type="text" id="bank_account_number" name="bank_account_number">
+
+      <label>
+        <input type="checkbox" id="is_recurring" name="is_recurring">
+        Czy płatności są cykliczne?
+      </label>
+
+      <button type="submit" class="primary-button" id="modal-submit-button">Dodaj</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Elementy DOM ---
+    const modal = document.getElementById('contractor-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalSubmitButton = document.getElementById('modal-submit-button');
+    const form = document.getElementById('contractor-form');
+    const tbody = document.getElementById('list-tbody-contractors');
+    let currentEditId = null;
+
+    // --- Funkcje ---
+    async function loadContractors() {
+        tbody.innerHTML = '<tr><td colspan="5">Ładowanie…</td></tr>';
+        try {
+            const res = await fetch('/costs/api/contractors');
+            if (!res.ok) throw new Error('Błąd pobierania danych');
+            const contractors = await res.json();
+
+            tbody.innerHTML = contractors.length ? contractors.map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td>${c.name}</td>
+                    <td>${c.bank_account_number || 'Brak'}</td>
+                    <td>${c.is_recurring ? 'Tak' : 'Nie'}</td>
+                    <td>
+                        <button class="button-small edit-btn" data-id="${c.id}">Edytuj</button>
+                        <button class="button-small delete-btn" data-id="${c.id}" data-name="${c.name}">Usuń</button>
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="5">Brak kontrahentów.</td></tr>';
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    function setupModal(isEditing, data = {}) {
+        currentEditId = isEditing ? data.id : null;
+        modalTitle.textContent = isEditing ? 'Edytuj kontrahenta' : 'Dodaj nowego kontrahenta';
+        modalSubmitButton.textContent = isEditing ? 'Zapisz zmiany' : 'Dodaj';
+        form.elements.name.value = data.name || '';
+        form.elements.bank_account_number.value = data.bank_account_number || '';
+        form.elements.is_recurring.checked = data.is_recurring || false;
+        modal.classList.add('active');
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('open-modal-btn').addEventListener('click', () => setupModal(false));
+    modal.querySelector('.modal-close-button').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', e => (e.target === modal) && modal.classList.remove('active'));
+
+    tbody.addEventListener('click', async e => {
+        const target = e.target;
+        const id = target.dataset.id;
+        if (!id) return;
+
+        if (target.classList.contains('edit-btn')) {
+            const res = await fetch('/costs/api/contractors');
+            const contractors = await res.json();
+            const contractorData = contractors.find(c => c.id == id);
+            if (contractorData) setupModal(true, contractorData);
+        }
+
+        if (target.classList.contains('delete-btn')) {
+            if (confirm(`Czy na pewno chcesz usunąć kontrahenta "${target.dataset.name}"?`)) {
+                const res = await fetch(`/costs/api/contractors/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Kontrahent usunięty!', 'success');
+                    loadContractors();
+                } else {
+                    showToast('Błąd usuwania', 'error');
+                }
+            }
+        }
+    });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const payload = {
+            name: form.elements.name.value,
+            bank_account_number: form.elements.bank_account_number.value,
+            is_recurring: form.elements.is_recurring.checked
+        };
+
+        const isEditing = currentEditId !== null;
+        const url = isEditing ? `/costs/api/contractors/${currentEditId}` : '/costs/api/contractors';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error(await res.text());
+            showToast(isEditing ? 'Kontrahent zaktualizowany!' : 'Kontrahent dodany!', 'success');
+            modal.classList.remove('active');
+            loadContractors();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // --- Start ---
+    loadContractors();
+});
+</script>
+{% endblock %}

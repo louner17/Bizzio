@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h2 class="page-header-title"></h2>
+    </div>
+    <div class="page-header-right">
+        <button class="button primary-button" id="open-add-category-modal">
+            <i class="ri-add-line"></i> Dodaj kategorię
+        </button>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="content-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nazwa kategorii</th>
+                    <th style="width: 150px;">Akcje</th> {# Nowa kolumna na przyciski #}
+                </tr>
+            </thead>
+            <tbody id="list-tbody-categories">
+                <tr><td colspan="3">Ładowanie…</td></tr> {# Zwiększono colspan #}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="category-modal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close-button">&times;</button>
+    <h3 id="modal-title">Dodaj nową kategorię</h3>
+    <form id="category-form"> {# Usunięto action i method, będą ustawiane dynamicznie #}
+      <label for="category-name">Nazwa kategorii</label>
+      <input type="text" id="category-name" name="name" required>
+      <button type="submit" class="primary-button" id="modal-submit-button">Dodaj kategorię</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('category-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalSubmitButton = document.getElementById('modal-submit-button');
+        const openModalBtn = document.getElementById('open-add-category-modal');
+        const closeModalBtn = modal.querySelector('.modal-close-button');
+        const form = document.getElementById('category-form');
+        const tbody = document.getElementById('list-tbody-categories');
+
+        let currentEditId = null; // Zmienna do przechowywania ID edytowanego elementu
+
+        // --- Funkcja do ładowania danych ---
+        async function loadCategories() {
+            tbody.innerHTML = '<tr><td colspan="3">Ładowanie…</td></tr>';
+            try {
+                const response = await fetch('/api/service_categories');
+                if (!response.ok) throw new Error('Błąd pobierania danych');
+                const categories = await response.json();
+
+                tbody.innerHTML = categories.length ? categories.map(cat => `
+                    <tr>
+                        <td>${cat.id}</td>
+                        <td>${cat.name}</td>
+                        <td>
+                            <button class="button-small edit-btn" data-id="${cat.id}" data-name="${cat.name}">Edytuj</button>
+                            <button class="button-small delete-btn" data-id="${cat.id}" data-name="${cat.name}">Usuń</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="3">Brak zdefiniowanych kategorii.</td></tr>';
+            } catch (error) {
+                showToast(error.message, 'error');
+                tbody.innerHTML = `<tr><td colspan="3">${error.message}</td></tr>`;
+            }
+        }
+
+        // --- Obsługa Modala ---
+        function openModalForEdit(id, name) {
+            currentEditId = id;
+            modalTitle.textContent = 'Edytuj kategorię';
+            modalSubmitButton.textContent = 'Zapisz zmiany';
+            form.elements.name.value = name;
+            modal.classList.add('active');
+        }
+
+        function openModalForAdd() {
+            currentEditId = null;
+            modalTitle.textContent = 'Dodaj nową kategorię';
+            modalSubmitButton.textContent = 'Dodaj kategorię';
+            form.reset();
+            modal.classList.add('active');
+        }
+
+        openModalBtn.addEventListener('click', openModalForAdd);
+        closeModalBtn.addEventListener('click', () => modal.classList.remove('active'));
+        modal.addEventListener('click', e => {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+
+        // --- Obsługa przycisków Edytuj i Usuń ---
+        tbody.addEventListener('click', async (e) => {
+            const target = e.target;
+
+            // Edycja
+            if (target.classList.contains('edit-btn')) {
+                const id = target.dataset.id;
+                const name = target.dataset.name;
+                openModalForEdit(id, name);
+            }
+
+            // Usuwanie
+            if (target.classList.contains('delete-btn')) {
+                const id = target.dataset.id;
+                const name = target.dataset.name;
+
+                if (confirm(`Czy na pewno chcesz usunąć kategorię "${name}"?`)) {
+                    try {
+                        const response = await fetch(`/api/service_categories/${id}`, { method: 'DELETE' });
+                        if (!response.ok) throw new Error('Błąd podczas usuwania');
+
+                        showToast('Kategoria usunięta pomyślnie.', 'success');
+                        await loadCategories();
+                    } catch (error) {
+                        showToast(error.message, 'error');
+                    }
+                }
+            }
+        });
+
+        // --- Obsługa wysyłki formularza (dla Dodawania i Edycji) ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = { name: form.elements.name.value };
+
+            const isEditing = currentEditId !== null;
+            const url = isEditing ? `/api/service_categories/${currentEditId}` : '/api/service_categories/add';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Wystąpił nieznany błąd');
+                }
+
+                showToast(isEditing ? 'Kategoria zaktualizowana!' : 'Kategoria dodana!', 'success');
+                modal.classList.remove('active');
+                await loadCategories();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        // --- Pierwsze załadowanie danych ---
+        loadCategories();
+    });
+</script>
+{% endblock %}

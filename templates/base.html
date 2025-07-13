@@ -7,9 +7,50 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
     <link rel="stylesheet" href="/static/css/global.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+
+  <style>
+    #toast-container {
+      position: fixed !important;
+      top: 1rem !important;
+      right: 1rem !important;
+      z-index: 9999 !important;
+      pointer-events: none !important;
+    }
+    .toast {
+      background-color: rgba(0, 0, 0, 0.85) !important;
+      color: #fff !important;
+      padding: 0.6rem 1rem !important;
+      margin-bottom: 0.5rem !important;
+      border-radius: 4px !important;
+      font-size: 0.9rem !important;
+      max-width: 250px !important;
+      word-wrap: break-word !important;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: auto !important;
+    }
+    .toast.show {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+    }
+
+      /* SUCCESS: zielone tło */
+.toast.success {
+  background-color: #28a745 !important;  /* Bootstrap green */
+  border-left: 4px solid #1e7e34 !important;
+}
+
+/* ERROR: czerwone tło */
+.toast.error {
+  background-color: #dc3545 !important;  /* Bootstrap red */
+  border-left: 4px solid #b21f2d !important;
+}
+  </style>
 </head>
 <body>
-
+    <!-- Kontener na toast-owe komunikaty -->
+  <div id="toast-container"></div>
     <div class="app-layout">
         {# Lewy Panel Boczny (Sidebar) #}
         <aside class="sidebar">
@@ -23,17 +64,16 @@
                         <a href="#" class="sidebar-link submenu-toggle"><i class="ri-service-line"></i> Usługi <i class="ri-arrow-down-s-line arrow-icon"></i></a>
                         <ul class="submenu">
                             <li><a href="/services" class="sidebar-link"><i class="ri-list-check"></i> Rejestr usług</a></li>
-                            <li><a href="/services/add-type" class="sidebar-link"><i class="ri-add-box-line"></i> Nowy typ usługi</a></li>
-                            <li><a href="/services/add-category" class="sidebar-link"><i class="ri-file-add-line"></i> Nowa kategoria</a></li>
+                            <li><a href="/services/add-type" class="sidebar-link"><i class="ri-add-box-line"></i> Typy usług</a></li>
+                            <li><a href="/services/add-category" class="sidebar-link"><i class="ri-file-add-line"></i> Kategorie usług</a></li>
                         </ul>
                     </li>
                     <li class="nav-item has-submenu">
                         <a href="#" class="sidebar-link submenu-toggle"><i class="ri-wallet-line"></i> Koszty <i class="ri-arrow-down-s-line arrow-icon"></i></a>
                         <ul class="submenu">
-                            <li><a href="/costs" class="sidebar-link"><i class="ri-money-dollar-box-line"></i> Lista kosztów</a></li>
-                            {# Jeśli masz 'Dodaj nowy koszt' jako osobną stronę, inaczej będzie w modalu #}
-                            <li><a href="/costs/add-type" class="sidebar-link"><i class="ri-add-box-line"></i> Nowy typ kosztu</a></li>
-                            <li><a href="/costs/add-category" class="sidebar-link"><i class="ri-file-add-line"></i> Nowa kategoria kosztu</a></li>
+                            <li><a href="/costs/" class="sidebar-link"><i class="ri-money-dollar-box-line"></i> Rejestr kosztów</a></li>
+                            <li><a href="/costs/contractors" class="sidebar-link"><i class="ri-user-2-line"></i> Kontrahenci</a></li>
+                            <li><a href="/costs/add-category" class="sidebar-link"><i class="ri-file-add-line"></i> Kategorie kosztów </a></li>
                         </ul>
                     </li>
                     <li><a href="/clients" class="sidebar-link"><i class="ri-group-line"></i> Klienci</a></li>
@@ -62,53 +102,14 @@
         </main>
     </div>
 
-    <script>
-        // JavaScript dla rozwijanego menu bocznego
-        document.querySelectorAll('.submenu-toggle').forEach(item => {
-            item.addEventListener('click', function(event) {
-                event.preventDefault(); // Zapobiega domyślnej akcji linku
-                const parentLi = this.closest('.has-submenu');
-                parentLi.classList.toggle('active'); // Przełącza klasę 'active' na rodzicu
-                // Opcjonalnie: zamyka inne otwarte submenu
-                document.querySelectorAll('.has-submenu.active').forEach(otherLi => {
-                    if (otherLi !== parentLi) {
-                        otherLi.classList.remove('active');
-                    }
-                });
-            });
-        });
+{# Include Flatpickr JS - jeśli już jest w base.html, możesz to usunąć stąd #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pl.js"></script>
 
-        // Oznaczanie aktywnego linku w sidebarze
-        document.addEventListener('DOMContentLoaded', () => {
-            const currentPath = window.location.pathname;
-            document.querySelectorAll('.sidebar-link').forEach(link => {
-                if (link.getAttribute('href') === currentPath) {
-                    link.classList.add('active');
-                    // Otwórz rodzica submenu, jeśli jest to element submenu
-                    let parentSubmenu = link.closest('.submenu');
-                    if (parentSubmenu) {
-                        parentSubmenu.closest('.has-submenu').classList.add('active');
-                    }
-                }
-            });
-            // Ustawia tytuł strony w top-bar
-            const pageTitleElement = document.querySelector('.page-title');
-            if (pageTitleElement) {
-                // Znajdź aktywny link i użyj jego tekstu, lub domyślnego tytułu z jinja
-                const activeLink = document.querySelector('.sidebar-link.active');
-                if (activeLink) {
-                     pageTitleElement.textContent = activeLink.textContent.trim();
-                } else if (pageTitleElement.textContent.includes('Dashboard')) {
-                    // Jeśli jest "Dashboard" z default value, nie zmieniaj
-                } else {
-                    // Fallback to title from block
-                    const blockTitle = document.querySelector('header h2'); // Assuming main content has h2 title
-                    if (blockTitle) {
-                         pageTitleElement.textContent = blockTitle.textContent.trim();
-                    }
-                }
-            }
-        });
-    </script>
+<script src="/static/js/global.js" defer></script>
+{% block scripts %}
+    {% endblock %}
 </body>
 </html>

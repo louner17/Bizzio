@@ -6,10 +6,10 @@
         <h2 class="page-header-title"></h2>
     </div>
     <div class="page-header-right">
-        <button class="button primary-button" id="open-modal-btn">
-            <i class="ri-add-line"></i> Zarejestruj fakturę
-        </button>
-    </div>
+    <button class="button primary-button" id="open-modal-btn">
+        <i class="ri-add-line"></i> Zarejestruj fakturę
+    </button>
+</div>
 </div>
 
 <div class="content-card">
@@ -41,7 +41,7 @@
   <div class="modal-content">
     <button class="modal-close-button">&times;</button>
     <h3 id="modal-title">Zarejestruj nową fakturę</h3>
-    <form id="cost-form">
+    <form id="cost-form" enctype="multipart/form-data">
         <label for="invoice_number">Numer faktury</label>
         <input type="text" id="invoice_number" name="invoice_number" required>
 
@@ -85,6 +85,9 @@
                 <input type="text" id="payment_date" name="payment_date">
             </label>
         </div>
+        <label for="attachment">Załącznik (PDF, JPG, PNG)</label>
+        <input type="file" id="attachment" name="attachment">
+
       <button type="submit" class="primary-button" id="modal-submit-button">Dodaj koszt</button>
     </form>
   </div>
@@ -215,40 +218,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Obsługa Formularza ---
-    form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const payload = {
-            invoice_number: form.elements.invoice_number.value,
-            invoice_date: fpInvoice.formatDate(fpInvoice.selectedDates[0], "Y-m-d"),
-            description: form.elements.description.value,
-            amount_net: parseFloat(form.elements.amount_net.value),
-            amount_gross: parseFloat(form.elements.amount_gross.value),
-            due_date: fpDue.formatDate(fpDue.selectedDates[0], "Y-m-d"),
-            contractor_name: form.elements.contractor_name.value,
-            category_id: parseInt(form.elements.category_id.value),
-            is_paid: form.elements.is_paid.checked,
-            payment_date: form.elements.is_paid.checked ? fpPayment.formatDate(fpPayment.selectedDates[0], "Y-m-d") : null
-        };
+   form.addEventListener('submit', async e => {
+    e.preventDefault();
 
-        const isEditing = currentEditId !== null;
-        const url = isEditing ? `/costs/api/${currentEditId}` : '/costs/api';
-        const method = isEditing ? 'PUT' : 'POST';
+    // Zamiast tworzyć obiekt JSON, tworzymy obiekt FormData
+    const formData = new FormData(form);
 
-        try {
-            const res = await fetch(url, {
-                method: method,
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.detail || 'Błąd zapisu');
-            showToast(isEditing ? 'Koszt zaktualizowany!' : 'Koszt dodany!', 'success');
-            modal.classList.remove('active');
-            loadCosts();
-        } catch(err) {
-            showToast(err.message, 'error');
-        }
-    });
+    // Ręcznie dodajemy wartości z checkboxów i datepickerów
+    formData.append('is_paid', form.elements.is_paid.checked);
+    if (form.elements.is_paid.checked) {
+        formData.append('payment_date', fpPayment.formatDate(fpPayment.selectedDates[0], "Y-m-d"));
+    }
+    formData.append('invoice_date', fpInvoice.formatDate(fpInvoice.selectedDates[0], "Y-m-d"));
+    formData.append('due_date', fpDue.formatDate(fpDue.selectedDates[0], "Y-m-d"));
+
+    // UWAGA: Nie ustawiamy 'Content-Type'. Przeglądarka zrobi to sama dla FormData.
+
+    const isEditing = currentEditId !== null;
+    const url = isEditing ? `/costs/api/${currentEditId}` : '/costs/api';
+    // Na razie edycja nie obsługuje zmiany pliku, więc użyjemy POST
+    const method = 'POST';
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            body: formData
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.detail || 'Błąd zapisu');
+        showToast(isEditing ? 'Koszt zaktualizowany!' : 'Koszt dodany!', 'success');
+        modal.classList.remove('active');
+        loadCosts();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+});
+
+
 
     // --- Start ---
     loadCosts();

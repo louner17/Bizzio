@@ -1,4 +1,5 @@
 # plik: app/costs/router.py
+import shutil
 
 from fastapi import APIRouter, Request, Depends, Form, HTTPException, File, UploadFile, status
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -12,9 +13,14 @@ import app.costs.crud as crud
 import app.costs.models as models
 import app.costs.schemas as schemas
 
+import fitz  # PyMuPDF
+import re
+import os
+
 # WAŻNA ZMIANA: Usuwamy prefiks z definicji routera
 router = APIRouter(tags=["Costs"])
 templates = Jinja2Templates(directory="templates")
+ATTACHMENTS_DIR = "attachments"
 
 # --- ŚCIEŻKI DLA STRON HTML ---
 
@@ -38,19 +44,42 @@ async def expense_categories_page(request: Request, db: Session = Depends(get_db
         {"request": request, "page_title": "Kategorie kosztów"}
     )
 
-# --- ENDPOINTY API DLA KOSZTÓW ---
-
 @router.get("/costs/api", response_model=List[schemas.Expense]) # Pełna ścieżka
 async def get_expenses_api(db: Session = Depends(get_db)):
     """Zwraca listę wszystkich kosztów, posortowaną."""
     expenses = crud.get_expenses(db)
     return expenses
 
-# ... (reszta endpointów API również musi mieć pełne ścieżki)
-
-@router.post("/costs/api", response_model=schemas.Expense) # Pełna ścieżka
-async def create_expense_api(expense_data: schemas.ExpenseCreate, db: Session = Depends(get_db)):
-    return crud.create_expense(db=db, expense_data=expense_data)
+@router.post("/costs/api", response_model=schemas.Expense)
+async def create_expense_api(
+    db: Session = Depends(get_db),
+    # Dane formularza odczytywane pojedynczo
+    invoice_number: str = Form(...),
+    invoice_date: date = Form(...),
+    description: str = Form(...),
+    amount_net: float = Form(...),
+    amount_gross: float = Form(...),
+    due_date: date = Form(...),
+    contractor_name: str = Form(...),
+    category_id: int = Form(...),
+    is_paid: bool = Form(False),
+    payment_date: Optional[date] = Form(None),
+    attachment: Optional[UploadFile] = File(None)
+):
+    """Tworzy nowy koszt (fakturę) na podstawie danych z formularza."""
+    expense_data = schemas.ExpenseCreate(
+        invoice_number=invoice_number,
+        invoice_date=invoice_date,
+        description=description,
+        amount_net=amount_net,
+        amount_gross=amount_gross,
+        due_date=due_date,
+        contractor_name=contractor_name,
+        category_id=category_id,
+        is_paid=is_paid,
+        payment_date=payment_date
+    )
+    return crud.create_expense(db=db, expense_data=expense_data, attachment=attachment)
 
 @router.put("/costs/api/{expense_id}", response_model=schemas.Expense) # Pełna ścieżka
 async def update_expense_api(expense_id: int, expense_data: schemas.ExpenseUpdate, db: Session = Depends(get_db)):

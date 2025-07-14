@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 import app.costs.models as models
 import app.costs.schemas as schemas
+import os
+import shutil
+from fastapi import UploadFile
+from typing import Optional
 
 # --- Operacje CRUD dla Kontrahentów ---
 def get_contractors(db: Session):
@@ -38,9 +42,20 @@ def get_expenses(db: Session):
     ).order_by(desc(models.Expense.invoice_date)).all()
 
 
-def create_expense(db: Session, expense_data: schemas.ExpenseCreate, attachment_path: str = None):
+def create_expense(db: Session, expense_data: schemas.ExpenseCreate, attachment: Optional[UploadFile] = None):
     # Logika "znajdź lub stwórz" dla kontrahenta
     contractor = get_or_create_contractor(db, name=expense_data.contractor_name)
+    attachment_path = None
+    if attachment and attachment.filename:
+        # Tworzenie ścieżki na podstawie daty faktury: attachments/expenses/MM_YYYY/
+        invoice_date = expense_data.invoice_date
+        dir_path = os.path.join("attachments", "expenses", f"{invoice_date.month:02d}_{invoice_date.year}")
+        os.makedirs(dir_path, exist_ok=True)
+
+        # Zapisanie pliku
+        attachment_path = os.path.join(dir_path, attachment.filename)
+        with open(attachment_path, "wb+") as file_object:
+            shutil.copyfileobj(attachment.file, file_object)
 
     db_expense = models.Expense(
         invoice_number=expense_data.invoice_number,
@@ -54,7 +69,7 @@ def create_expense(db: Session, expense_data: schemas.ExpenseCreate, attachment_
         category_id=expense_data.category_id,
         attachment_path=attachment_path,
         is_paid=expense_data.is_paid or False,
-        payment_date=expense_data.payment_date if expense_data.is_paid else None
+        payment_date=expense_data.payment_date if expense_data.is_paid else None,
     )
     db.add(db_expense)
     db.commit()
@@ -84,9 +99,15 @@ def update_expense_payment_status(db: Session, expense_id: int, payment_date: da
         db.refresh(expense)
     return expense
 
+
 def delete_expense(db: Session, expense_id: int):
+    """Usuwa koszt oraz powiązany z nim załącznik z dysku."""
     expense = get_expense(db, expense_id)
     if expense:
+        # Jeśli istnieje ścieżka do załącznika i plik istnieje, usuń go
+        if expense.attachment_path and os.path.exists(expense.attachment_path):
+            os.remove(expense.attachment_path)
+
         db.delete(expense)
         db.commit()
         return True

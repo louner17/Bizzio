@@ -20,5 +20,8 @@ __pycache__/
 .vscode/
 
 # Foldery aplikacji
-attachments/
-.attachments/
+attachments/expenses
+attachments/surveys
+
+.attachments/expenses
+.attachments/surveys

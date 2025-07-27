@@ -1,13 +1,27 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import RedirectResponse
-from starlette.config import Config
 from authlib.integrations.starlette_client import OAuth
 import os
 
-# Pobieramy dane ze zmiennych środowiskowych, które ustawimy w GCP
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-SECRET_KEY = os.getenv("SECRET_KEY", "domyslny_sekret_do_testow_lokalnych")
+# ZMIANA: Przenosimy odczyt zmiennych do funkcji, aby nie blokowały startu
+def get_oauth_client():
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+
+    if not google_client_id or not google_client_secret:
+        # W środowisku produkcyjnym to powinno być traktowane jako błąd krytyczny
+        print("BŁĄD KRYTYCZNY: Brak GOOGLE_CLIENT_ID lub GOOGLE_CLIENT_SECRET")
+        return None
+
+    oauth = OAuth()
+    oauth.register(
+        name='google',
+        client_id=google_client_id,
+        client_secret=google_client_secret,
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={'scope': 'openid email profile'}
+    )
+    return oauth
 
 # Zmień te adresy na swoje!
 ALLOWED_EMAILS = {
@@ -16,16 +30,7 @@ ALLOWED_EMAILS = {
 }
 
 router = APIRouter(tags=["Auth"])
-oauth = OAuth()
-oauth.register(
-    name='google',
-    client_id=GOOGLE_CLIENT_ID,
-    client_secret=GOOGLE_CLIENT_SECRET,
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
 
-# --- Zależność do sprawdzania, czy użytkownik jest zalogowany ---
 async def get_current_user(request: Request):
     user = request.session.get('user')
     if not user:
@@ -34,15 +39,20 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=403, detail="Brak dostępu dla tego konta Google.")
     return user
 
-# --- Endpointy API ---
 @router.get('/login')
 async def login(request: Request):
+    oauth_client = get_oauth_client()
+    if not oauth_client:
+        raise HTTPException(status_code=500, detail="Konfiguracja OAuth nie jest dostępna.")
     redirect_uri = request.url_for('auth')
-    return await oauth.google.authorize_redirect(request, str(redirect_uri))
+    return await oauth_client.google.authorize_redirect(request, str(redirect_uri))
 
 @router.get('/auth', name='auth')
 async def auth(request: Request):
-    token = await oauth.google.authorize_access_token(request)
+    oauth_client = get_oauth_client()
+    if not oauth_client:
+        raise HTTPException(status_code=500, detail="Konfiguracja OAuth nie jest dostępna.")
+    token = await oauth_client.google.authorize_access_token(request)
     user = token.get('userinfo')
     if user:
         request.session['user'] = dict(user)

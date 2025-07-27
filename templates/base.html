@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
     <link rel="stylesheet" href="/static/css/global.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/main.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js'></script>
 
   <style>
     #toast-container {
@@ -60,6 +63,7 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="/dashboard" class="sidebar-link active"><i class="ri-dashboard-line"></i> Dashboard</a></li>
+                    <li><a href="/calendar" class="sidebar-link"><i class="ri-calendar-line"></i> Kalendarz</a></li>
                     <li class="nav-item has-submenu">
                         <a href="#" class="sidebar-link submenu-toggle"><i class="ri-service-line"></i> Usługi <i class="ri-arrow-down-s-line arrow-icon"></i></a>
                         <ul class="submenu">
@@ -77,7 +81,7 @@
                         </ul>
                     </li>
                     <li><a href="/clients" class="sidebar-link"><i class="ri-group-line"></i> Klienci</a></li>
-                    <li><a href="/invoices" class="sidebar-link"><i class="ri-file-text-line"></i> Faktury</a></li>
+                    <li><a href="/reports" class="sidebar-link"><i class="ri-pie-chart-line"></i> Raporty</a></li>
                     <li><a href="/settings" class="sidebar-link"><i class="ri-settings-line"></i> Ustawienia</a></li>
                 </ul>
             </nav>

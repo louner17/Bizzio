@@ -1,32 +1,36 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-header">
-    <div class="page-header-left">
-        <h2 class="page-header-title"></h2>
-    </div>
-    <div class="page-header-right">
-        <button class="button primary-button" id="open-modal-btn">
-            <i class="ri-add-line"></i> Dodaj typ
-        </button>
-    </div>
-</div>
+<header>
+  <h2 class="page-header-title">Typy usług</h2>
+</header>
 
 <div class="content-card">
+    <div class="page-header" style="margin-bottom: 0; padding-bottom: 0;">
+        <div class="page-header-left">
+            <h3>Lista typów usług</h3>
+        </div>
+        <div class="page-header-right">
+            <button class="button primary-button" id="open-modal-btn">
+                <i class="ri-add-line"></i> Dodaj typ
+            </button>
+        </div>
+    </div>
     <div class="table-responsive">
-        <table class="content-table">
-            <thead>
-                <tr>
-                    <th>Nazwa</th>
-                    <th>Kategoria</th>
-                    <th>VAT (%)</th>
-                    <th style="width: 150px;">Akcje</th>
-                </tr>
-            </thead>
-            <tbody id="list-tbody-types">
-                <tr><td colspan="4">Ładowanie…</td></tr>
-            </tbody>
-        </table>
+      <table class="content-table">
+        <thead>
+          <tr>
+            <th>Nazwa</th>
+            <th>Kategoria</th>
+            <th>VAT (%)</th>
+            <th>Cena bazowa (PLN)</th>
+            <th style="width: 150px;">Akcje</th>
+          </tr>
+        </thead>
+        <tbody id="list-tbody-service-types">
+          <tr><td colspan="5">Ładowanie…</td></tr>
+        </tbody>
+      </table>
     </div>
 </div>
 
@@ -54,6 +58,10 @@
         {% endfor %}
       </select>
 
+      <label for="type-default-price">Cena domyślna (PLN)</label>
+      <input type="number" id="type-default-price" name="default_price" step="0.01">
+        <label for="type-duration">Czas trwania (minuty)</label>
+        <input type="number" id="type-duration" name="duration_minutes" step="15">
       <button type="submit" class="primary-button" id="modal-submit-button">Dodaj typ</button>
     </form>
   </div>
@@ -66,105 +74,86 @@
         const modal = document.getElementById('service-type-modal');
         const modalTitle = document.getElementById('modal-title');
         const modalSubmitButton = document.getElementById('modal-submit-button');
-        const openModalBtn = document.getElementById('open-modal-btn');
-        const closeModalBtn = modal.querySelector('.modal-close-button');
         const form = document.getElementById('service-type-form');
-        const tbody = document.getElementById('list-tbody-types');
-
+        const tbody = document.getElementById('list-tbody-service-types');
         let currentEditId = null;
 
-        // --- Funkcja ładowania danych ---
         async function loadTypes() {
-            tbody.innerHTML = '<tr><td colspan="4">Ładowanie…</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5">Ładowanie…</td></tr>';
             try {
                 const res = await fetch('/api/service_types');
-                if (!res.ok) throw new Error('Błąd pobierania danych: ' + await res.text());
+                if (!res.ok) throw new Error(await res.text());
                 const list = await res.json();
-
                 tbody.innerHTML = list.length ? list.map(t => `
                     <tr>
                         <td>${t.name}</td>
                         <td>${t.category.name}</td>
                         <td>${(t.vat_rate * 100).toFixed(0)}</td>
+                        <td>${t.default_price ? t.default_price.toFixed(2) : 'Brak'}</td>
                         <td>
                             <button class="button-small edit-btn" data-id="${t.id}">Edytuj</button>
                             <button class="button-small delete-btn" data-id="${t.id}" data-name="${t.name}">Usuń</button>
                         </td>
                     </tr>
-                `).join('') : '<tr><td colspan="4">Brak typów usług.</td></tr>';
+                `).join('') : '<tr><td colspan="5">Brak typów usług.</td></tr>';
             } catch (e) {
-                showToast(e.message, 'error');
-                tbody.innerHTML = `<tr><td colspan="4">${e.message}</td></tr>`;
+                showToast(`Błąd ładowania: ${e.message}`, 'error');
             }
         }
 
-        // --- Obsługa Modala ---
-        async function openModalForEdit(id) {
-            currentEditId = id;
-            modalTitle.textContent = 'Edytuj typ usługi';
-            modalSubmitButton.textContent = 'Zapisz zmiany';
-
-            // Pobierz aktualne dane rekordu, aby wypełnić formularz
-            const response = await fetch(`/api/service_types`); // Pobieramy całą listę i filtrujemy
-            const types = await response.json();
-            const currentType = types.find(t => t.id === id);
-
-            if(currentType) {
-                form.elements.name.value = currentType.name;
-                form.elements.service_category_id.value = currentType.service_category_id;
-                form.elements.vat_rate_id.value = currentType.vat_rate_id;
-            }
-            modal.classList.add('active');
-        }
-
-        function openModalForAdd() {
-            currentEditId = null;
-            modalTitle.textContent = 'Dodaj nowy typ usługi';
-            modalSubmitButton.textContent = 'Dodaj typ';
+        function setupModal(isEditing, data = {}) {
+            currentEditId = isEditing ? data.id : null;
             form.reset();
+            modalTitle.textContent = isEditing ? 'Edytuj typ usługi' : 'Dodaj nowy typ usługi';
+            modalSubmitButton.textContent = isEditing ? 'Zapisz zmiany' : 'Dodaj typ';
+
+            if (isEditing) {
+                form.elements.name.value = data.name;
+                form.elements.service_category_id.value = data.service_category_id;
+                form.elements.vat_rate_id.value = data.vat_rate_id;
+                form.elements.default_price.value = data.default_price || '';
+                form.elements.duration_minutes.value = data.duration_minutes || '';
+            }
             modal.classList.add('active');
         }
 
-        openModalBtn.addEventListener('click', openModalForAdd);
-        closeModalBtn.addEventListener('click', () => modal.classList.remove('active'));
-        modal.addEventListener('click', e => {
-            if (e.target === modal) modal.classList.remove('active');
-        });
+        document.getElementById('open-modal-btn').addEventListener('click', () => setupModal(false));
+        modal.querySelector('.modal-close-button').addEventListener('click', () => modal.classList.remove('active'));
+        modal.addEventListener('click', e => (e.target === modal) && modal.classList.remove('active'));
 
-        // --- Obsługa przycisków Edytuj i Usuń (delegacja zdarzeń) ---
-        tbody.addEventListener('click', async (e) => {
+        tbody.addEventListener('click', async e => {
             const target = e.target;
+            const id = target.dataset.id;
+            if (!id) return;
 
             if (target.classList.contains('edit-btn')) {
-                const id = parseInt(target.dataset.id, 10);
-                await openModalForEdit(id);
+                const res = await fetch('/api/service_types');
+                const types = await res.json();
+                const typeData = types.find(t => t.id == id);
+                if (typeData) setupModal(true, typeData);
             }
 
             if (target.classList.contains('delete-btn')) {
-                const id = target.dataset.id;
-                const name = target.dataset.name;
-
-                if (confirm(`Czy na pewno chcesz usunąć typ usługi "${name}"?`)) {
-                    try {
-                        const response = await fetch(`/api/service_types/${id}`, { method: 'DELETE' });
-                        if (!response.ok) throw new Error('Błąd podczas usuwania');
-
+                if (confirm(`Czy na pewno chcesz usunąć "${target.dataset.name}"?`)) {
+                    const res = await fetch(`/api/service_types/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
                         showToast('Typ usługi usunięty.', 'success');
-                        await loadTypes();
-                    } catch (error) {
-                        showToast(error.message, 'error');
+                        loadTypes();
+                    } else {
+                        showToast('Błąd usuwania.', 'error');
                     }
                 }
             }
         });
 
-        // --- Obsługa wysyłki formularza ---
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async e => {
             e.preventDefault();
             const payload = {
                 name: form.elements.name.value,
-                service_category_id: parseInt(form.elements.service_category_id.value, 10),
-                vat_rate_id: parseInt(form.elements.vat_rate_id.value, 10)
+                service_category_id: parseInt(form.elements.service_category_id.value),
+                vat_rate_id: parseInt(form.elements.vat_rate_id.value),
+                default_price: parseFloat(form.elements.default_price.value) || null,
+                duration_minutes: parseInt(form.elements.duration_minutes.value) || 60
             };
 
             const isEditing = currentEditId !== null;
@@ -172,26 +161,20 @@
             const method = isEditing ? 'PUT' : 'POST';
 
             try {
-                const response = await fetch(url, {
+                const res = await fetch(url, {
                     method: method,
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-
-                const result = await response.json();
-                if (!response.ok) {
-                    throw new Error(result.detail || 'Wystąpił nieznany błąd');
-                }
-
-                showToast(isEditing ? 'Typ usługi zaktualizowany!' : 'Typ usługi dodany!', 'success');
+                if (!res.ok) throw new Error((await res.json()).detail || 'Błąd zapisu');
+                showToast(isEditing ? 'Zaktualizowano!' : 'Dodano!', 'success');
                 modal.classList.remove('active');
-                await loadTypes();
-            } catch (error) {
-                showToast(error.message, 'error');
+                loadTypes();
+            } catch (err) {
+                showToast(err.message, 'error');
             }
         });
 
-        // --- Pierwsze załadowanie ---
         loadTypes();
     });
 </script>

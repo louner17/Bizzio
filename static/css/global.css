@@ -1,32 +1,19 @@
-/* Plik: static/css/global.css */
+/* Plik: static/css/global.css - Wersja zweryfikowana */
 
 :root {
     --pico-font-family: 'Inter', system-ui, -apple-system, sans-serif;
-
-    /* === PALETA BARW (Light Mode) - na podstawie pierwszego screenshota === */
-    --primary: #5D5FEF;       /* Główny fioletowo-niebieski akcent */
-    --primary-hover: #4a4de1;  /* Ciemniejszy odcień do hover */
-    --primary-light: rgba(93, 95, 239, 0.1); /* Jasny odcień tła dla aktywnych elementów */
-
-    /* Tła */
-    --bg-main: #F8F8FA;        /* Główne, bardzo jasne szare tło aplikacji */
-    --bg-card: #FFFFFF;        /* Białe tło dla kart, sidebara, modali */
-
-    /* Tekst */
-    --text-primary: #2D3748;   /* Główny, ciemnoszary kolor tekstu */
-    --text-secondary: #718096; /* Jaśniejszy szary dla opisów i nieaktywnych linków */
-    --text-on-primary: #FFFFFF;/* Biały tekst na przyciskach z głównym tłem */
-
-    /* Ramki i separatory */
-    --border-color: #E2E8F0;   /* Bardzo jasna ramka */
-
-    /* Elementy formularzy */
+    --primary: #5D5FEF;
+    --primary-hover: #4a4de1;
+    --primary-light: rgba(93, 95, 239, 0.1);
+    --bg-main: #F8F8FA;
+    --bg-card: #FFFFFF;
+    --text-primary: #2D3748;
+    --text-secondary: #718096;
+    --text-on-primary: #FFFFFF;
+    --border-color: #E2E8F0;
     --input-bg: #FFFFFF;
     --input-border: #E2E8F0;
     --input-focus-border: var(--primary);
-
-    /* === NADPISANIE ZMIENNYCH PICO.CSS === */
-
     --pico-background-color: var(--bg-main);
     --pico-color: var(--text-primary);
     --pico-h1-color: var(--text-primary);
@@ -42,9 +29,7 @@
     --pico-button-color: var(--text-on-primary);
     --pico-font-size: 15px;
     --pico-border-radius: 8px;
-    
 }
-
 body {
     margin: 0;
     font-family: var(--pico-font-family);
@@ -52,132 +37,103 @@ body {
     color: var(--text-primary);
     overflow: hidden;
 }
-
-/* Układ aplikacji */
 .app-layout {
     display: grid;
-    grid-template-columns: 240px 1fr; /* Stała szerokość sidebara */
+    grid-template-columns: 240px 1fr;
     height: 100vh;
 }
-
-/* Panel Boczny (Sidebar) */
 .sidebar {
     grid-column: 1 / 2;
-    background-color: var(--bg-card); /* Białe tło */
+    background-color: var(--bg-card);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     padding: 1.5rem 0;
 }
-
 .sidebar-header {
     padding: 0 1.5rem;
     margin-bottom: 2rem;
 }
-
 .sidebar-header .project-name {
     font-size: 1.5rem;
     color: var(--text-primary);
     font-weight: 600;
 }
-
 .sidebar-nav ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
-
 .sidebar-nav .sidebar-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1.5rem;
-    margin: 0 1rem 0.25rem 0; /* Margines tylko z prawej */
-    border-radius: 0 12px 12px 0; /* Zaokrąglenie tylko z prawej */
-    color: var(--text-secondary); /* Domyślnie szary */
+    margin: 0 1rem 0.25rem 0;
+    border-radius: 0 12px 12px 0;
+    color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
     transition: background-color 0.2s, color 0.2s;
 }
-
 .sidebar-nav .sidebar-link i {
     font-size: 1.2rem;
     color: var(--text-secondary);
     transition: color 0.2s;
 }
-
 .sidebar-nav .sidebar-link.active {
     background-color: var(--primary);
-    color: var(--text-on-primary); /* Biały tekst */
+    color: var(--text-on-primary);
     font-weight: 600;
 }
-
 .sidebar-nav .sidebar-link.active i {
     color: var(--text-on-primary);
 }
-
 .sidebar-nav .sidebar-link:hover:not(.active) {
     color: var(--primary);
 }
-
 .sidebar-nav .sidebar-link:hover:not(.active) i {
     color: var(--primary);
 }
-
-/* Poprawka wcięcia dla podmenu w panelu bocznym */
 .sidebar-nav .submenu {
-     list-style: none;
-    padding: 0;
-    margin: 0.5rem 0 0.5rem 1rem; /* Margines dla wcięcia */
-    border-left: 3px solid var(--border-color); /* Linia wizualna */
-    padding-left: 1rem; /* Dodatkowe wcięcie tekstu */
-
-    /* --- Kluczowe linijki do ukrywania menu --- */
+    list-style: none;
+    padding: 0 0 0 1rem;
+    margin: 0.5rem 0 0.5rem 1rem;
+    border-left: 3px solid var(--border-color);
     overflow: hidden;
-    max-height: 0; /* Domyślnie menu jest zwinięte */
+    max-height: 0;
     transition: max-height 0.3s ease-in-out;
 }
-
-/* Lekka korekta, aby linki w podmenu nie miały podwójnego wcięcia */
 .sidebar-nav .submenu li a {
     padding-left: 1rem;
 }
-
 .sidebar-nav .has-submenu.active > .submenu {
-    max-height: 500px; /* WAŻNE: Pokazuje menu, gdy rodzic ma klasę .active. 500px to bezpieczna, duża wartość. */
+    max-height: 500px;
 }
-
-/* Główna zawartość */
 .main-content {
     grid-column: 2 / 3;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
 }
-
-/* Górny pasek */
 .top-bar {
-    background-color: var(--bg-card); /* Białe tło */
+    background-color: var(--bg-card);
     padding: 1rem 2rem;
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 100;
 }
-
 .page-title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
+    color: var(--text-primary);
 }
-
-/* Obszar z treścią */
 .content-area {
     padding: 2rem;
     flex-grow: 1;
 }
-
-/* Karty */
 article, .card {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -186,7 +142,6 @@ article, .card {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     margin-bottom: 1.5rem;
 }
-
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -195,13 +150,10 @@ article, .card {
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
 }
-
 .card-header h3 {
     margin: 0;
     font-size: 1.25rem;
 }
-
-/* Przyciski */
 .primary-button, button[type="submit"] {
     background-color: var(--primary);
     color: var(--text-on-primary);
@@ -210,108 +162,72 @@ article, .card {
     padding: 0.6rem 1.2rem;
     border-radius: var(--pico-border-radius);
 }
-
 .primary-button:hover, button[type="submit"]:hover {
     background-color: var(--primary-hover);
     color: var(--text-on-primary);
 }
-
-/* Formularze */
 label {
     color: var(--text-primary);
     margin-bottom: 0.5rem;
     font-weight: 500;
     font-size: 0.9rem;
 }
-
 input, select, textarea {
     background-color: var(--input-bg);
     border: 1px solid var(--input-border);
     border-radius: var(--pico-border-radius);
     padding: 0.6rem 0.8rem;
     transition: border-color 0.2s, box-shadow 0.2s;
+    color: var(--text-primary);
 }
-
 input:focus, select:focus, textarea:focus {
     border-color: var(--input-focus-border);
     box-shadow: 0 0 0 3px rgba(93, 95, 239, 0.2);
 }
-
-/* Tabele */
 .table-responsive {
     overflow-x: auto;
     width: 100%;
 }
-
 table {
     width: 100%;
-    border-collapse: collapse; /* Łączy ramki komórek w jedną linię */
-    background-color: transparent; /* Tło pochodzi z nadrzędnej karty */
+    border-collapse: collapse;
+    background-color: transparent;
     color: var(--text-primary);
     font-size: 0.9rem;
 }
-
 th, td {
-    padding: 0.85rem 1rem; /* Spójny, czytelny padding */
+    padding: 0.85rem 1rem;
     text-align: left;
-    border: none; /* Resetujemy domyślne ramki */
-    white-space: nowrap; /* Zapobiega łamaniu tekstu w komórkach */
+    border: none;
+    white-space: nowrap;
 }
-
-/* Nagłówek tabeli */
-thead {
-    /* Używamy tła głównego, aby lekko odróżnić nagłówek */
-    background-color: var(--bg-main);
-}
-
-th {
-    font-weight: 600;
-    color: var(--text-secondary); /* Szary, mniej ważny tekst */
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    /* Grubsza linia pod nagłówkiem dla wyraźnego oddzielenia */
-    border-bottom: 2px solid var(--border-color);
-}
-
-/* KLUCZOWA POPRAWKA: Reset tła dla komórek danych */
 td {
-    background-color: transparent; /* Ustawiamy tło komórek na przezroczyste */
-    color: var(--text-primary); /* Upewniamy się, że tekst jest ciemny */
+    background-color: transparent;
+    color: var(--text-primary);
 }
-
-/* Wiersze w ciele tabeli */
 tbody tr {
-    /* Cienka linia oddzielająca każdy wiersz */
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.2s ease;
 }
-
-/* Usuwamy linię pod ostatnim wierszem dla czystszego wyglądu */
 tbody tr:last-child {
     border-bottom: none;
 }
-
-/* Efekt najechania myszą na wiersz */
 tbody tr:hover {
-    background-color: var(--bg-main); /* Podświetlenie wiersza na kolor tła aplikacji */
+    background-color: var(--bg-main);
 }
-
-/* Modal */
 .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background-color: rgba(45, 55, 72, 0.7); /* Półprzezroczysty ciemny szary */
+    background-color: rgba(45, 55, 72, 0.7);
     justify-content: center;
     align-items: center;
     z-index: 1000;
 }
-
 .modal-overlay.active {
     display: flex;
 }
-
 .modal-content {
     background-color: var(--bg-card);
     padding: 2rem;
@@ -319,8 +235,8 @@ tbody tr:hover {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     max-width: 500px;
     width: 90%;
+    position: relative;
 }
-
 .modal-close-button {
     position: absolute;
     top: 1rem; right: 1rem;
@@ -329,14 +245,12 @@ tbody tr:hover {
     color: var(--text-secondary);
     cursor: pointer;
 }
-
-/* Powiadomienia Toast */
 #toast-container {
     position: fixed;
-    top: 1rem; right: 1rem;
+    top: 1rem;
+    right: 1rem;
     z-index: 9999;
 }
-
 .toast {
     color: #fff;
     padding: 0.8rem 1.2rem;
@@ -348,46 +262,41 @@ tbody tr:hover {
     transform: translateY(-10px);
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
-
 .toast.show {
     opacity: 1;
     transform: translateY(0);
 }
-
 .toast.success {
-    background-color: #28a745; /* Zielony */
+    background-color: #28a745;
 }
-
 .toast.error {
-    background-color: #dc3545; /* Czerwony */
+    background-color: #dc3545;
 }
-
-
-/* Nagłówek strony (tytuł, przyciski, wyszukiwarka) */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
 }
-
 .page-header-title {
     font-size: 1.75rem;
     font-weight: 600;
     margin: 0;
+    color: var(--primary);
 }
-
 .page-header-right {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
-
-/* Wyszukiwarka */
+.page-header-right > .search-wrapper,
+.page-header-right > .button {
+    display: flex;
+    align-items: center;
+}
 .search-wrapper {
     position: relative;
 }
-
 .search-wrapper i {
     position: absolute;
     left: 0.75rem;
@@ -395,93 +304,66 @@ tbody tr:hover {
     transform: translateY(-50%);
     color: var(--text-secondary);
 }
-
 .search-input {
-    padding-left: 2.5rem; /* Robi miejsce na ikonę */
-    width: 250px; /* Stała szerokość */
+    padding-left: 2.5rem;
+    width: 250px;
     border-radius: var(--pico-border-radius);
 }
-
-/* Kontener na treść (np. tabelę), który wygląda jak karta */
 .content-card {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 12px; /* Większe zaokrąglenie */
+    border-radius: 12px;
     padding: 0.5rem 1rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
-
-/* Nowy, czysty wygląd tabel */
 .content-table {
     width: 100%;
     border-collapse: collapse;
 }
-
 .content-table th, .content-table td {
     padding: 1rem 1.5rem;
     text-align: left;
     border: none;
 }
-
 .content-table thead {
     border-bottom: 1px solid var(--border-color);
 }
-
 .content-table th {
     color: var(--text-secondary);
     font-size: 0.8rem;
     font-weight: 500;
-    text-transform: none; /* Bez wielkich liter */
+    text-transform: none;
 }
-
-.content-table tbody tr {
-    border-bottom: 1px solid var(--border-color);
-}
-
-.content-table tbody tr:last-child {
-    border-bottom: none;
-}
-
-.content-table tbody tr:hover {
-    background-color: var(--bg-main);
-}
-
-/* Ustawia tło i kolor tekstu dla wszystkich komórek w nagłówku */
 .content-table thead th {
-    background-color: var(--bg-main); /* Ustawia delikatnie szare tło (to samo co tło strony) */
+    background-color: var(--bg-main);
     color: var(--text-secondary);
 }
-
-/* Zaokrąglenie lewego górnego rogu (tylko pierwszej komórki nagłówka) */
 .content-table thead th:first-child {
-    border-top-left-radius: 12px; /* Używamy tego samego zaokrąglenia co w .content-card */
+    border-top-left-radius: 12px;
 }
-
-/* Zaokrąglenie prawego górnego rogu (tylko ostatniej komórki nagłówka) */
 .content-table thead th:last-child {
     border-top-right-radius: 12px;
 }
-
-input,
-select,
-textarea {
-    color: var(--text-primary); /* Używamy głównego, ciemnego koloru tekstu z Twojej palety */
+.content-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
 }
-
-.page-title {
-    color: var(--text-primary);
+.content-table tbody tr:last-child {
+    border-bottom: none;
 }
-
+.content-table tbody tr:hover {
+    background-color: var(--bg-main);
+}
 .row-unpaid {
-    background-color: rgba(220, 53, 69, 0.07) !important; /* Delikatne czerwone tło */
+    background-color: rgba(220, 53, 69, 0.07) !important;
 }
-
+.row-alternate:not(:hover) {
+    background-color: var(--bg-main);
+}
 input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   background-color: transparent;
   margin: 0;
-  
   font: inherit;
   color: currentColor;
   width: 1.15em;
@@ -489,34 +371,246 @@ input[type="checkbox"] {
   border: 0.15em solid var(--input-border);
   border-radius: 0.25em;
   transform: translateY(-0.075em);
-  
   display: inline-grid;
   place-content: center;
   cursor: pointer;
   margin-right: 0.5em;
+  border: 1px solid var(--border-color);
 }
-
-/* Tworzymy "ptaszka" (checkmark) wewnątrz, domyślnie niewidocznego */
 input[type="checkbox"]::before {
   content: "";
   width: 0.65em;
   height: 0.65em;
   transform: scale(0);
   transition: 120ms transform ease-in-out;
-  box-shadow: inset 1em 1em var(--text-on-primary); /* Kolor ptaszka */
-  
-  /* Magia do stworzenia kształtu 'V' */
+  box-shadow: inset 1em 1em var(--text-on-primary);
   transform-origin: bottom left;
   clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
 }
-
-/* Gdy checkbox jest zaznaczony... */
 input[type="checkbox"]:checked {
-  background-color: var(--primary); /* Wypełniamy go fioletowym kolorem */
+  background-color: var(--primary);
   border-color: var(--primary);
 }
-
-/* ...pokazujemy "ptaszka" */
 input[type="checkbox"]:checked::before {
   transform: scale(1);
+}
+.kpi-value {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+.chart-container-small {
+    position: relative;
+    max-width: 320px;
+    max-height: 320px;
+    margin: auto;
+}
+/* Style dla wizualnego próbnika kolorów */
+.color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-top: 0.5rem;
+}
+.color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform 0.2s ease, border-color 0.2s;
+}
+.color-swatch.selected {
+    border-color: var(--primary);
+    transform: scale(1.15);
+}
+
+
+/* ============================================= */
+/* === Style dla Biblioteki Kalendarza (FullCalendar) === */
+/* ============================================= */
+
+/* --- Główny kontener kalendarza --- */
+.fc {
+    border: none; /* Usuwamy domyślną ramkę */
+}
+
+/* --- Górny Pasek Narzędzi (Toolbar) --- */
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 1.5rem;
+}
+
+.fc .fc-toolbar-title {
+    color: var(--text-primary); /* Ciemny tekst tytułu (np. "Lipiec 2025") */
+    font-size: 1.5em;
+}
+
+/* Przyciski nawigacji i zmiany widoku */
+.fc .fc-button {
+    background-color: var(--bg-card); /* Białe tło */
+    color: var(--text-secondary); /* Szary tekst */
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+    text-transform: capitalize; /* Zwykła wielkość liter */
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* Aktywny przycisk (np. "miesiąc", "tydzień") i hover */
+.fc .fc-button-primary:not(:disabled):active,
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button:hover {
+    background-color: var(--primary);
+    color: var(--text-on-primary); /* Biały tekst */
+    border-color: var(--primary);
+}
+
+/* --- Siatka Kalendarza --- */
+
+/* Nagłówki Dni Tygodnia (np. Pon, Wt, Śr) */
+.fc .fc-col-header-cell {
+    background-color: transparent; /* Usuwamy czarne tło */
+    border: none;
+    padding-bottom: 0.5rem;
+}
+
+.fc .fc-col-header-cell-cushion { /* Tekst w nagłówku dnia */
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* Komórki dni */
+.fc .fc-daygrid-day {
+    border-color: var(--border-color); /* Jasnoszara siatka */
+}
+
+/* --- Wygląd Wizyt (Eventów) --- */
+.fc-event {
+    border: none !important;
+    border-radius: 4px !important; /* Delikatne zaokrąglenie */
+    padding: 2px 4px !important;
+    font-size: 0.8em !important;
+}
+
+/* Tekst wewnątrz wizyty */
+.fc-event .fc-event-title,
+.fc-event .fc-event-time {
+    color: white !important; /* Zapewnia biały, czytelny tekst na kolorowym tle */
+    font-weight: 500;
+}
+
+/* Usuwamy podkreślenie z linków wewnątrz kalendarza */
+.fc a {
+    text-decoration: none;
+}
+
+.fc .fc-day-today {
+    background-color: var(--bg-main) !important;
+}
+
+/* Styl dla zaległych wizyt w kalendarzu */
+.fc-event.event-overdue {
+    border: 2px solid #dc3545 !important; /* Czerwona ramka */
+    position: relative;
+}
+
+/* Dodanie ikony gwiazdki do zaległych wizyt */
+.fc-event.event-overdue::after {
+    content: '★'; /* Symbol gwiazdki */
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    color: white;
+    font-size: 1.1em;
+    text-shadow: 0 0 3px black; /* Cień dla lepszej widoczności */
+}
+
+/* Podświetlenie pustego pola w kalendarzu po najechaniu myszką */
+.fc .fc-timegrid-slot-lane:hover {
+    background-color: var(--primary-light); /* Używamy jasnofioletowego koloru z motywu */
+}
+
+/* Styl dla dymka z godziną w kalendarzu */
+#time-tooltip {
+    position: absolute;
+    display: none; /* Domyślnie ukryty */
+    padding: 5px 10px;
+    background-color: var(--text-primary); /* Ciemne tło */
+    color: var(--bg-card); /* Jasny tekst */
+    border-radius: var(--pico-border-radius);
+    font-size: 0.9em;
+    font-weight: 500;
+    z-index: 1001; /* Upewnia się, że jest na samym wierzchu */
+    pointer-events: none; /* Powoduje, że myszka "ignoruje" dymek */
+}
+
+.chart-wrapper {
+    position: relative;
+    max-width: 95%;
+    /* NOWA LINIA: Ustawiamy minimalną wysokość */
+    min-height: 400px; 
+    margin: 1rem auto;
+    transition: max-width 0.3s ease-in-out, min-height 0.3s ease-in-out;
+}
+
+/* Styl dla małych wykresów kołowych */
+.chart-wrapper.chart-container-small {
+    max-width: 400px;
+    /* NOWA LINIA: Ustawiamy minimalną wysokość dla mniejszych wykresów */
+    min-height: 350px;
+}
+
+/* Style dla nawigacji na stronie raportów */
+.report-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.report-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--pico-border-radius);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+    border: 1px solid transparent;
+}
+
+.report-link i {
+    font-size: 1.2rem;
+}
+
+/* Aktywna/wskazywana zakładka raportu */
+.report-link.active,
+.report-link:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary-light);
+    font-weight: 600;
+}
+
+.nav-separator {
+    padding: 1rem 1rem 0.5rem;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+.nav-separator hr {
+    margin-bottom: 0.5rem;
+    background-color: var(--border-color);
+}
+
+/* Styl dla wizyt, które już się odbyły */
+.fc-event.event-past {
+    opacity: 0.65; /* Lekko zmniejszamy przezroczystość, aby "wygasić" wizytę */
+}
+
+/* Upewniamy się, że zaległa wizyta (z gwiazdką) pozostaje w pełni widoczna */
+.fc-event.event-overdue {
+    opacity: 1;
 }

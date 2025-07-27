@@ -1,0 +1,24 @@
+# Plik: .gitignore
+
+# Baza danych
+data.db
+*.sqlite3
+
+# Folder środowiska wirtualnego
+.venv/
+venv/
+
+# Pliki cache Pythona
+__pycache__/
+*.pyc
+
+# Pliki środowiskowe (z sekretami)
+.env
+
+# Foldery generowane przez IDE
+.idea/
+.vscode/
+
+# Foldery aplikacji
+attachments/
+.attachments/

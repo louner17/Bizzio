@@ -1,12 +1,11 @@
-# plik: app/costs/router.py
-import shutil
 
 from fastapi import APIRouter, Request, Depends, Form, HTTPException, File, UploadFile, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import date # Upewnij się, że ten import jest
+from datetime import date
+from fastapi.responses import StreamingResponse
 
 from app.core.dependencies import get_db
 import app.costs.crud as crud
@@ -131,13 +130,26 @@ async def contractors_page(request: Request, db: Session = Depends(get_db)):
         {"request": request, "page_title": "Kontrahenci"}
     )
 
-@router.post("/api/contractors", response_model=schemas.Contractor)
+
+@router.post("/costs/api/contractors", response_model=schemas.Contractor)
 async def create_contractor_api(
-    contractor_data: schemas.ContractorCreate,
-    db: Session = Depends(get_db)
+        contractor_data: schemas.ContractorCreate,
+        db: Session = Depends(get_db)
 ):
     """Tworzy nowego kontrahenta."""
-    return crud.get_or_create_contractor(db, name=contractor_data.name)
+    existing = db.query(models.Contractor).filter(models.Contractor.name == contractor_data.name).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Kontrahent o tej nazwie już istnieje."
+        )
+
+    return crud.get_or_create_contractor(
+        db,
+        name=contractor_data.name,
+        bank_account_number=contractor_data.bank_account_number,
+        is_recurring=contractor_data.is_recurring
+    )
 
 @router.put("/costs/api/contractors/{contractor_id}", response_model=schemas.Contractor)
 async def update_contractor_api(
@@ -178,3 +190,21 @@ async def delete_expense_category_api(category_id: int, db: Session = Depends(ge
     if not success:
         raise HTTPException(status_code=404, detail="Kategoria nie znaleziona")
     return {"ok": True}
+
+@router.post("/costs/api/export-for-accountant")
+async def export_for_accountant(
+    year: int = Form(...),
+    month: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Tworzy paczkę ZIP z fakturami dla księgowego i zwraca ją do pobrania."""
+    zip_buffer, zip_filename = crud.prepare_accountant_package(db, year=year, month=month)
+
+    if not zip_buffer:
+        raise HTTPException(status_code=404, detail="Nie znaleziono faktur do wygenerowania paczki dla podanego okresu.")
+
+    return StreamingResponse(
+        iter([zip_buffer.getvalue()]),
+        media_type="application/x-zip-compressed",
+        headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
+    )

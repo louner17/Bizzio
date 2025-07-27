@@ -1,35 +1,213 @@
 {% extends "base.html" %}
 
 {% block content %}
-<header>
-  <h2 class="page-header-title">Rejestr Klientów</h2>
-</header>
-
-<div class="grid">
-    <article class="card">
-        <div class="card-header">
-            <h3>Lista klientów</h3>
-            <button class="button primary-button">
-                <i class="ri-add-line"></i> Dodaj klienta
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Imię i Nazwisko</th>
-                        <th>Telefon</th>
-                        <th>Email</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="4">Funkcjonalność w trakcie budowy.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </article>
+<div class="page-header">
+    <div class="page-header-left">
+        <h2 class="page-header-title"></h2>
+    </div>
+    <div class="page-header-right">
+        <div class="search-wrapper">
+        <i class="ri-search-line"></i>
+        <input type="search" id="search-input" class="search-input" placeholder="Szukaj klienta...">
+    </div>
+        <button class="button primary-button" id="open-modal-btn">
+            <i class="ri-add-line"></i> Dodaj klienta
+        </button>
+    </div>
 </div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="content-table">
+            <thead>
+                <tr>
+                    <th>Imię i Nazwisko</th>
+                    <th>Telefon</th>
+                    <th>Źródło</th>
+                    <th>Data dodania</th>
+                    <th>Data urodzenia</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="list-tbody-clients">
+                <tr><td colspan="6">Ładowanie…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="client-modal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="modal-close-button">&times;</button>
+    <h3 id="modal-title">Dodaj nowego klienta</h3>
+    <form id="client-form" enctype="multipart/form-data">
+        <div class="grid">
+            <label>Imię<input type="text" name="first_name" required></label>
+            <label>Nazwisko<input type="text" name="last_name" required></label>
+        </div>
+        <label>Numer telefonu<input type="tel" name="phone_number" maxlength="9" minlength="9"></label>
+        <label>Data urodzenia<input type="text" id="birth_date" name="birth_date"></label>
+        <label>Źródło pozyskania
+            <select name="source">
+                <option value="">-- Wybierz --</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Google Maps">Google Maps</option>
+                <option value="Polecenie">Polecenie</option>
+                <option value="Inne">Inne</option>
+            </select>
+        </label>
+        <label>Skan ankiety (.pdf, .jpg, .png)<input type="file" name="survey"></label>
+      <button type="submit" class="primary-button" id="modal-submit-button">Dodaj</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Elementy DOM ---
+    const modal = document.getElementById('client-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalSubmitButton = document.getElementById('modal-submit-button');
+    const form = document.getElementById('client-form');
+    const tbody = document.getElementById('list-tbody-clients');
+    const searchInput = document.getElementById('search-input');
+    const fpBirthDate = flatpickr(form.elements.birth_date, { dateFormat: "Y-m-d", locale: "pl", allowInput: true });
+    let currentEditId = null;
+
+    // --- Funkcje ---
+    async function loadClients(searchTerm = '') {
+        tbody.innerHTML = '<tr><td colspan="6">Ładowanie…</td></tr>';
+        const url = new URL('/clients/api', window.location.origin);
+        if (searchTerm) {
+            url.searchParams.append('search', searchTerm);
+        }
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Błąd pobierania danych');
+            const clients = await res.json();
+            renderTable(clients);
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    function renderTable(clients) {
+        tbody.innerHTML = clients.length ? clients.map(c => `
+            <tr>
+                <td>${c.first_name} ${c.last_name}</td>
+                <td>${c.phone_number || 'Brak'}</td>
+                <td>${c.source || 'Brak'}</td>
+                <td>${c.date_added}</td>
+                <td>${c.birth_date || 'Brak'}</td>
+                <td>
+                    ${c.survey_path ? `<a href="/${c.survey_path}" target="_blank" class="button-small">Ankieta</a>` : ''}
+                    <button class="button-small edit-btn" data-id="${c.id}">Edytuj</button>
+                    <button class="button-small delete-btn" data-id="${c.id}" data-name="${c.first_name} ${c.last_name}">Usuń</button>
+                </td>
+            </tr>
+        `).join('') : `<tr><td colspan="6">Brak klientów pasujących do wyszukiwania.</td></tr>`;
+    }
+
+    // NOWA, KOMPLETNA FUNKCJA DO OBSŁUGI MODALA
+    async function setupModal(isEditing, clientId = null) {
+        currentEditId = clientId;
+        form.reset();
+
+        if (isEditing) {
+            modalTitle.textContent = 'Edytuj dane klienta';
+            modalSubmitButton.textContent = 'Zapisz zmiany';
+            try {
+                const res = await fetch(`/clients/api/${clientId}`);
+                if (!res.ok) throw new Error('Nie można pobrać danych klienta');
+                const data = await res.json();
+                form.elements.first_name.value = data.first_name || '';
+                form.elements.last_name.value = data.last_name || '';
+                form.elements.phone_number.value = data.phone_number || '';
+                form.elements.source.value = data.source || '';
+                fpBirthDate.setDate(data.birth_date || null);
+            } catch(err) {
+                showToast(err.message, 'error');
+                return;
+            }
+        } else {
+            modalTitle.textContent = 'Dodaj nowego klienta';
+            modalSubmitButton.textContent = 'Dodaj';
+        }
+        form.elements.survey.parentElement.style.display = isEditing ? 'none' : 'block';
+        modal.classList.add('active');
+    }
+
+    // --- Event Listeners ---
+    searchInput.addEventListener('input', (e) => loadClients(e.target.value));
+    document.getElementById('open-modal-btn').addEventListener('click', () => setupModal(false));
+    modal.querySelector('.modal-close-button').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', e => (e.target === modal) && modal.classList.remove('active'));
+
+    // ZAKTUALIZOWANY LISTENER DLA TABELI
+    tbody.addEventListener('click', async e => {
+        const target = e.target;
+        const id = target.dataset.id;
+        if (!id) return;
+
+        if (target.classList.contains('edit-btn')) {
+            await setupModal(true, id);
+        }
+
+        if (target.classList.contains('delete-btn')) {
+            if (confirm(`Czy na pewno chcesz usunąć klienta "${target.dataset.name}"?`)) {
+                try {
+                    const res = await fetch(`/clients/api/${id}`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Błąd usuwania');
+                    showToast('Klient usunięty.', 'success');
+                    loadClients(searchInput.value);
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }
+        }
+    });
+
+    // ZAKTUALIZOWANY LISTENER DLA FORMULARZA
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const isEditing = currentEditId !== null;
+        let url = isEditing ? `/clients/api/${currentEditId}` : '/clients/api';
+        let method, body, headers;
+
+        if (isEditing) {
+            method = 'PUT';
+            headers = {'Content-Type': 'application/json'};
+            const payload = {
+                first_name: formData.get('first_name'),
+                last_name: formData.get('last_name'),
+                phone_number: formData.get('phone_number'),
+                source: formData.get('source'),
+                birth_date: formData.get('birth_date') || null
+            };
+            body = JSON.stringify(payload);
+        } else {
+            method = 'POST';
+            headers = {}; // Przeglądarka sama ustawi nagłówek dla FormData
+            body = formData;
+        }
+
+        try {
+            const res = await fetch(url, { method, headers, body });
+            if (!res.ok) throw new Error((await res.json()).detail || 'Błąd zapisu');
+            showToast(isEditing ? 'Dane klienta zaktualizowane!' : 'Klient dodany!', 'success');
+            modal.classList.remove('active');
+            loadClients(searchInput.value);
+        } catch(err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // --- Start ---
+    loadClients();
+});
+</script>
 {% endblock %}

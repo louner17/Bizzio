@@ -26,10 +26,10 @@ def run_startup_event():
 
 
         # Wypełnianie kategorii usług.
-        w_cat = services_crud.get_or_create_category(db, name="Wizaż")
-        r_cat = services_crud.get_or_create_category(db, name="Rzęsy")
-        b_cat = services_crud.get_or_create_category(db, name="Brwi")
-        p_cat = services_crud.get_or_create_category(db, name="Pakiet")
+        w_cat = services_crud.get_or_create_category(db, name="Wizaż", color="#5D5FEF")
+        r_cat = services_crud.get_or_create_category(db, name="Rzęsy", color="#FF7A85")
+        b_cat = services_crud.get_or_create_category(db, name="Brwi", color="#4FD1C5")
+        p_cat = services_crud.get_or_create_category(db, name="Pakiet", color="#A0AEC0")
 
         # Wypełnianie polskich stawek VAT.
         vat_0 = services_crud.get_or_create_vat_rate(db, description="0%", rate=0.00)

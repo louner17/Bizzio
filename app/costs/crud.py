@@ -1,6 +1,8 @@
 import datetime
+import io
+import zipfile
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc
+from sqlalchemy import desc, extract
 import app.costs.models as models
 import app.costs.schemas as schemas
 import os
@@ -12,10 +14,14 @@ from typing import Optional
 def get_contractors(db: Session):
     return db.query(models.Contractor).all()
 
-def get_or_create_contractor(db: Session, name: str):
+def get_or_create_contractor(db: Session, name: str, bank_account_number: Optional[str] = None, is_recurring: bool = False):
     contractor = db.query(models.Contractor).filter(models.Contractor.name == name).first()
     if not contractor:
-        contractor = models.Contractor(name=name)
+        contractor = models.Contractor(
+            name=name,
+            bank_account_number=bank_account_number,
+            is_recurring=is_recurring
+        )
         db.add(contractor)
         db.commit()
         db.refresh(contractor)
@@ -152,3 +158,53 @@ def delete_expense_category(db: Session, category_id: int):
         db.commit()
         return True
     return False
+
+
+def prepare_accountant_package(db: Session, year: int, month: int):
+    """
+    Zbiera podatkowe faktury kosztowe z danego miesiąca, pakuje załączniki do ZIP
+    i aktualizuje status rekordów w bazie danych.
+    """
+    # 1. Znajdź wszystkie koszty podatkowe z danego okresu, które mają załącznik
+    costs_to_process = db.query(models.Expense).options(
+        joinedload(models.Expense.category),
+        joinedload(models.Expense.contractor)
+    ).filter(
+        models.Expense.attachment_path.isnot(None),
+        models.Expense.category.has(is_tax_deductible=True),
+        extract('year', models.Expense.invoice_date) == year,
+        extract('month', models.Expense.invoice_date) == month
+    ).all()
+
+    if not costs_to_process:
+        return None, None  # Nie znaleziono faktur do przetworzenia
+
+    # 2. Stwórz archiwum ZIP w pamięci
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+        for cost in costs_to_process:
+            if os.path.exists(cost.attachment_path):
+                # 3. Stwórz nową, ustandaryzowaną nazwę pliku
+                contractor_name = cost.contractor.name.replace(' ', '_').lower()
+                invoice_month = f"{cost.invoice_date.month:02d}"
+                invoice_year = cost.invoice_date.year
+                _, file_extension = os.path.splitext(cost.attachment_path)
+                new_filename = f"fv_{contractor_name}_{invoice_month}_{invoice_year}{file_extension}"
+
+                # 4. Dodaj plik do ZIP-a pod nową nazwą
+                zip_file.write(cost.attachment_path, arcname=new_filename)
+
+    # 5. Zaktualizuj status przetworzonych kosztów w bazie danych
+    for cost in costs_to_process:
+        cost.is_transferred_to_accountant = True
+        cost.transferred_to_accountant_date = datetime.date.today()
+
+    db.commit()
+
+    # Przygotuj nazwę pliku ZIP do pobrania
+    zip_filename = f"pawlowska_atelier_ksiegowosc_{month:02d}_{year}.zip"
+
+    # Przewiń bufor na początek, aby można go było odczytać
+    zip_buffer.seek(0)
+
+    return zip_buffer, zip_filename

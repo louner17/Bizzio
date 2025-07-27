@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-header-title">Raporty</h2>
+    <div class="page-header-right">
+        <label for="period-select" style="margin-bottom: 0;">
+            <select id="period-select">
+                <option value="1m">Ostatni miesiąc</option>
+                <option value="3m" selected>Ostatnie 3 miesiące</option>
+                <option value="6m">Ostatnie 6 miesięcy</option>
+                <option value="1y">Ostatni rok</option>
+                <option value="2y">Ostatnie 2 lata</option>
+                <option value="all">Cały okres</option>
+            </select>
+        </label>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 250px 1fr; align-items: flex-start;">
+    <div class="content-card" style="padding: 1rem;">
+        <nav class="report-nav">
+            <a href="#" class="report-link active" data-report="financial_summary">
+                <i class="ri-line-chart-line"></i> Zestawienie Finansowe
+            </a>
+            <a href="#" class="report-link" data-report="expense_breakdown">
+                <i class="ri-pie-chart-2-line"></i> Podział Kosztów
+            </a>
+            <a href="#" class="report-link" data-report="revenue_structure">
+                <i class="ri-pie-chart-box-line"></i> Struktura Przychodów
+            </a>
+            <a href="#" class="report-link" data-report="service_popularity">
+                <i class="ri-bar-chart-horizontal-line"></i> Popularność Usług
+            </a>
+            <a href="#" class="report-link" data-report="client_sources">
+                <i class="ri-user-search-line"></i> Źródła Pozyskania Klientów
+            </a>
+            <div class="nav-separator">
+                <hr>
+                <span>Prognozy</span>
+            </div>
+
+            <a href="#" class="report-link" data-report="forecasted_revenue">
+             <i class="ri-line-chart-line"></i> Prognoza Przychodów
+            </a>
+            <a href="#" class="report-link" data-report="forecasted_services">
+                <i class="ri-calendar-check-line"></i> Prognoza Usług
+            </a>
+            <a href="#" class="report-link" data-report="forecasted_service_count">
+                <i class="ri-line-chart-line"></i> Trend Wizyt
+            </a>
+        </nav>
+    </div>
+
+    <article class="card" style="grid-column: 2 / 3;">
+    <h3 id="chart-title">Ładowanie...</h3>
+    <div class="chart-wrapper">
+        <canvas id="main-chart-canvas"></canvas>
+    </div>
+    </article>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // === Elementy DOM ===
+    const periodSelector = document.getElementById('period-select');
+    const reportLinks = document.querySelectorAll('.report-link');
+    const chartCanvas = document.getElementById('main-chart-canvas');
+    const chartTitle = document.getElementById('chart-title');
+    const chartWrapper = chartCanvas.parentElement; // Pobieramy kontener wykresu
+    const chartContext = chartCanvas.getContext('2d');
+
+    let currentChart = null;
+    let reportData = null;
+
+    // === Funkcje ===
+    async function loadAndRenderReports(period) {
+        chartTitle.textContent = 'Ładowanie danych...';
+        if (currentChart) currentChart.destroy();
+
+        try {
+            const res = await fetch(`/api/reports?period=${period}`);
+            if (!res.ok) throw new Error('Błąd ładowania danych raportów');
+            reportData = await res.json();
+
+            const activeReportKey = document.querySelector('.report-link.active').dataset.report;
+            renderChart(activeReportKey);
+
+        } catch (e) {
+            showToast(e.message, 'error');
+            chartTitle.textContent = 'Błąd ładowania';
+        }
+    }
+
+    function renderChart(reportKey) {
+        if (currentChart) currentChart.destroy();
+        if (!reportData || !reportData[reportKey]) {
+            chartTitle.textContent = 'Brak danych dla tego raportu.';
+            return;
+        };
+
+        const data = reportData[reportKey];
+        let chartConfig;
+
+        if (reportKey === 'expense_breakdown' || reportKey === 'revenue_structure') {
+            chartWrapper.classList.add('chart-container-small');
+        } else {
+            chartWrapper.classList.remove('chart-container-small');
+        }
+        const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false
+        };
+
+        switch (reportKey) {
+            case 'financial_summary':
+                chartTitle.textContent = 'Zestawienie Finansowe';
+                chartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            { label: 'Przychód', data: data.revenue, borderColor: '#5D5FEF', backgroundColor: 'rgba(93, 95, 239, 0.1)', fill: true, tension: 0.2 },
+                            { label: 'Koszt', data: data.costs, borderColor: '#FF7A85', backgroundColor: 'rgba(255, 122, 133, 0.1)', fill: true, tension: 0.2 },
+                            { label: 'Zysk', data: data.profit, borderColor: '#4FD1C5', backgroundColor: 'rgba(79, 209, 197, 0.1)', fill: true, tension: 0.2 }
+                        ]
+                    },
+                    options: chartOptions
+                };
+                break;
+            case 'expense_breakdown':
+                chartTitle.textContent = 'Podział Kosztów';
+                chartConfig = { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.data }] }, options: chartOptions };
+                break;
+            case 'revenue_structure':
+                chartTitle.textContent = 'Struktura Przychodów';
+                chartConfig = { type: 'pie', data: { labels: data.labels, datasets: [{ data: data.data }] }, options: chartOptions };
+                break;
+            case 'service_popularity':
+                chartTitle.textContent = 'Popularność Usług';
+                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba wykonanych usług', data: data.data, backgroundColor: 'rgba(93, 95, 239, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
+                break;
+            case 'client_sources':
+                chartTitle.textContent = 'Źródła Pozyskania Klientów';
+                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba klientów', data: data.data, backgroundColor: 'rgba(79, 209, 197, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
+                break;
+            case 'forecasted_revenue':
+                chartTitle.textContent = 'Prognoza Przychodów';
+                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Potencjalny przychód', data: data.data, backgroundColor: 'rgba(93, 95, 239, 0.7)' }] }, options: chartOptions};
+                break;
+
+            case 'forecasted_services':
+                chartTitle.textContent = 'Prognoza Usług ';
+                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba zaplanowanych wizyt', data: data.data, backgroundColor: 'rgba(79, 209, 197, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
+                break;
+            case 'forecasted_service_count':
+    chartTitle.textContent = 'Trend Planowanych Wizyt';
+    chartConfig = {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: data.datasets
+        },
+        options: chartOptions
+    };
+    break;
+}
+        if (chartConfig) {
+        // Upewnijmy się, że dane są poprawne
+        chartConfig.data.datasets.forEach(dataset => {
+            if (!dataset.data) dataset.data = [];
+        });
+        currentChart = new Chart(chartContext, chartConfig);
+        }
+}
+
+    // === Event Listeners ===
+    periodSelector.addEventListener('change', (e) => {
+        loadAndRenderReports(e.target.value);
+    });
+
+    reportLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            reportLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            renderChart(link.dataset.report);
+        });
+    });
+
+    // === Pierwsze załadowanie ===
+    loadAndRenderReports(periodSelector.value);
+});
+</script>
+{% endblock %}

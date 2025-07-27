@@ -2,16 +2,9 @@
 
 {% block content %}
 <div class="page-header">
-    <div class="page-header-left">
-        <h2 class="page-header-title"></h2>
-    </div>
+    <h2 class="page-header-title">Rejestr usług</h2>
     <div class="page-header-right">
-        <input type="text" id="filter-start-date" placeholder="Data od..." style="width: 150px;">
-        <input type="text" id="filter-end-date" placeholder="Data do..." style="width: 150px;">
-
-        <button class="button primary-button" id="open-modal-btn">
-            <i class="ri-add-line"></i> Dodaj usługę
-        </button>
+        <button class="button primary-button" id="open-modal-btn">Dodaj usługę</button>
     </div>
 </div>
 
@@ -20,15 +13,10 @@
         <table class="content-table">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Nazwa usługi</th>
-                    <th>Cena netto (PLN)</th>
-                    <th style="width: 150px;">Akcje</th>
+                    <th>Data</th><th>Nazwa usługi</th><th>Klient</th><th>Cena netto (PLN)</th><th>Akcje</th>
                 </tr>
             </thead>
-            <tbody id="list-tbody-services">
-                <tr><td colspan="4">Ładowanie…</td></tr>
-            </tbody>
+            <tbody id="list-tbody-services"></tbody>
         </table>
     </div>
 </div>
@@ -40,19 +28,61 @@
         <form id="service-form">
             <label for="service_type_id">Typ usługi</label>
             <select id="service_type_id" name="service_type_id" required>
-                <option value="">-- Wybierz typ usługi --</option>
-                {% for st in service_types %}
-                <option value="{{ st.id }}">{{ st.name }} ({{ st.category.name }})</option>
-                {% endfor %}
+                <option value="">-- Wybierz --</option>
+                {% for st in service_types %}<option value="{{ st.id }}" data-price="{{ st.default_price or '' }}">{{ st.name }}</option>{% endfor %}
             </select>
+
+            <label for="client_name">Klient (opcjonalnie)</label>
+            <input type="text" id="client_name" name="client_name" list="clients-datalist" placeholder="Wpisz lub wybierz...">
+            <datalist id="clients-datalist"></datalist>
 
             <label for="service_date">Data wykonania:</label>
             <input type="text" id="service_date" name="date" required>
 
-            <label for="base_price_net">Cena netto (PLN):</label>
-            <input type="number" id="base_price_net" name="base_price_net" step="0.01" required>
+            <label for="base_price_input">Cena podstawowa (PLN)</label>
+            <input type="number" id="base_price_input" step="0.01" required>
 
+            <div class="grid">
+                <label>Zniżka
+                    <input type="number" id="discount_value" step="0.01" placeholder="Wartość">
+                </label>
+                <label>Typ zniżki
+                    <select id="discount_type">
+                        <option value="amount">PLN</option>
+                        <option value="percent">%</option>
+                    </select>
+                </label>
+            </div>
+            <hr>
+            <div style="text-align: right;">
+                <h4>Cena końcowa: <span id="final-price">0.00</span> PLN</h4>
+            </div>
+            <hr>
+            <input type="hidden" id="base_price_net" name="base_price_net">
             <button type="submit" class="primary-button" id="modal-submit-button">Dodaj usługę</button>
+        </form>
+    </div>
+</div>
+
+<div id="client-details-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Uzupełnij dane nowego klienta</h3>
+        <p>Klient <strong id="new-client-name"></strong> został dodany. Uzupełnij jego dane.</p>
+        <form id="client-details-form">
+            <input type="hidden" id="new-client-id" name="id">
+            <label>Numer telefonu<input type="tel" name="phone_number" maxlength="9"></label>
+            <label>Data urodzenia<input type="text" id="client-birth-date" name="birth_date"></label>
+            <label>Źródło pozyskania
+                <select name="source">
+                    <option value="">-- Wybierz --</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Google Maps">Google Maps</option>
+                    <option value="Polecenie">Polecenie</option>
+                    <option value="Inne">Inne</option>
+                </select>
+            </label>
+            <button type="submit" class="primary-button">Zapisz i zamknij</button>
         </form>
     </div>
 </div>
@@ -61,100 +91,160 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Elementy DOM ---
-    const modal = document.getElementById('service-modal');
+    // === Elementy DOM ===
+    const serviceModal = document.getElementById('service-modal');
+    const serviceForm = document.getElementById('service-form');
+    const serviceTypeSelect = document.getElementById('service_type_id');
+    const basePriceInput = document.getElementById('base_price_input');
+    const discountValueInput = document.getElementById('discount_value');
+    const discountTypeSelect = document.getElementById('discount_type');
+    const finalPriceSpan = document.getElementById('final-price');
+    const finalPriceHiddenInput = document.getElementById('base_price_net');
     const modalTitle = document.getElementById('modal-title');
     const modalSubmitButton = document.getElementById('modal-submit-button');
-    const openModalBtn = document.getElementById('open-modal-btn');
-    const closeModalBtn = modal.querySelector('.modal-close-button');
-    const form = document.getElementById('service-form');
     const tbody = document.getElementById('list-tbody-services');
-    const startDateInput = document.getElementById('filter-start-date');
-    const endDateInput = document.getElementById('filter-end-date');
+    const clientsDatalist = document.getElementById('clients-datalist');
+    const clientNameInput = document.getElementById('client_name');
+    const clientDetailsModal = document.getElementById('client-details-modal');
+    const clientDetailsForm = document.getElementById('client-details-form');
+    const openModalBtn = document.getElementById('open-modal-btn');
+    const closeModalBtn = serviceModal.querySelector('.modal-close-button');
     let currentEditId = null;
+    let allClients = [];
 
-    // --- Inicjalizacja Flatpickr ---
-    const datePickerConfig = { dateFormat: "Y-m-d", locale: "pl", allowInput: true };
-    const fpStart = flatpickr(startDateInput, { ...datePickerConfig, onChange: () => loadServices() });
-    const fpEnd = flatpickr(endDateInput, { ...datePickerConfig, onChange: () => loadServices() });
-    const fpModal = flatpickr(form.elements.date, datePickerConfig);
+    // === Inicjalizacja Flatpickr ===
+    const fpServiceDate = flatpickr(serviceForm.elements.date, { dateFormat: "Y-m-d", locale: "pl" });
+    flatpickr(clientDetailsForm.elements.birth_date, { dateFormat: "Y-m-d", locale: "pl", allowInput: true });
 
-    // --- Ładowanie danych do tabeli ---
-    async function loadServices() {
-        tbody.innerHTML = '<tr><td colspan="4">Ładowanie…</td></tr>';
-        const startDate = fpStart.selectedDates[0] ? fpStart.formatDate(fpStart.selectedDates[0], "Y-m-d") : '';
-        const endDate = fpEnd.selectedDates[0] ? fpEnd.formatDate(fpEnd.selectedDates[0], "Y-m-d") : '';
+    // === Logika Obliczania Ceny ===
+    function calculateFinalPrice() {
+        const basePrice = parseFloat(basePriceInput.value) || 0;
+        const discountValue = parseFloat(discountValueInput.value) || 0;
+        const discountType = discountTypeSelect.value;
+        let finalPrice = basePrice;
 
-        const url = new URL('/api/services', window.location.origin);
-        if (startDate) url.searchParams.append('start_date', startDate);
-        if (endDate) url.searchParams.append('end_date', endDate);
+        if (discountValue > 0) {
+            finalPrice = (discountType === 'percent')
+                ? basePrice * (1 - discountValue / 100)
+                : basePrice - discountValue;
+        }
 
-        try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('Błąd pobierania danych: ' + await res.text());
-            const list = await res.json();
+        finalPrice = Math.max(0, finalPrice);
+        finalPriceSpan.textContent = finalPrice.toFixed(2);
+        finalPriceHiddenInput.value = finalPrice.toFixed(2);
+    }
 
-            tbody.innerHTML = list.length ? list.map(s => `
-                <tr>
+   async function loadData() {
+    try {
+        const servicesRes = await fetch('/api/services');
+        if (!servicesRes.ok) throw new Error('Błąd ładowania usług');
+        const services = await servicesRes.json();
+
+        let currentMonth = null;
+        let useAlternateColor = false;
+
+        tbody.innerHTML = services.length ? services.map(s => {
+            const recordMonth = s.date.substring(5, 7);
+            if (recordMonth !== currentMonth) {
+                currentMonth = recordMonth;
+                useAlternateColor = !useAlternateColor;
+            }
+            const rowClass = useAlternateColor ? 'row-alternate' : '';
+
+            return `
+                <tr class="${rowClass}">
                     <td>${s.date}</td>
                     <td>${s.service_type.name}</td>
+                    <td>${s.client ? `${s.client.first_name} ${s.client.last_name}` : 'Brak'}</td>
                     <td>${s.base_price_net.toFixed(2)}</td>
                     <td>
                         <button class="button-small edit-btn" data-id="${s.id}">Edytuj</button>
-                        <button class="button-small delete-btn" data-id="${s.id}" data-name="${s.service_type.name} ${s.date}">Usuń</button>
+                        <button class="button-small delete-btn" data-id="${s.id}" data-name="${s.service_type.name} z dnia ${s.date}">Usuń</button>
                     </td>
                 </tr>
-            `).join('') : '<tr><td colspan="4">Brak usług w wybranym okresie.</td></tr>';
-        } catch (e) {
-            showToast(e.message, 'error');
-            tbody.innerHTML = `<tr><td colspan="4">${e.message}</td></tr>`;
+            `
+        }).join('') : '<tr><td colspan="5">Brak usług.</td></tr>';
+
+        const clientsRes = await fetch('/clients/api');
+        if (!clientsRes.ok) throw new Error('Błąd ładowania klientów');
+        allClients = await clientsRes.json();
+        updateClientDatalist(allClients);
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+    function updateClientDatalist(clients) {
+        clientsDatalist.innerHTML = clients.map(c => `<option value="${c.first_name} ${c.last_name}">`).join('');
+    }
+
+    // === Obsługa Modala ===
+    async function setupModal(isEditing, serviceId = null) {
+        currentEditId = serviceId;
+        serviceForm.reset();
+
+        if (isEditing) {
+            modalTitle.textContent = 'Edytuj usługę';
+            modalSubmitButton.textContent = 'Zapisz zmiany';
+            try {
+                const res = await fetch(`/api/services/${serviceId}`);
+                if (!res.ok) throw new Error('Nie można pobrać danych usługi');
+                const data = await res.json();
+
+                serviceForm.elements.service_type_id.value = data.service_type_id;
+                serviceForm.elements.client_name.value = data.client ? `${data.client.first_name} ${data.client.last_name}` : '';
+                fpServiceDate.setDate(data.date);
+                basePriceInput.value = data.base_price_net;
+            } catch (err) {
+                showToast(err.message, 'error');
+                return;
+            }
+        } else {
+            modalTitle.textContent = 'Dodaj nową usługę';
+            modalSubmitButton.textContent = 'Dodaj usługę';
+            fpServiceDate.setDate(new Date());
         }
+        calculateFinalPrice();
+        serviceModal.classList.add('active');
     }
 
-    // --- Obsługa Modala ---
-    async function openModalForEdit(id) {
-        currentEditId = id;
-        modalTitle.textContent = 'Edytuj usługę';
-        modalSubmitButton.textContent = 'Zapisz zmiany';
-        try {
-            const res = await fetch(`/api/services/${id}`);
-            if(!res.ok) throw new Error('Nie można pobrać danych usługi');
-            const data = await res.json();
-            form.elements.service_type_id.value = data.service_type_id;
-            fpModal.setDate(data.date);
-            form.elements.base_price_net.value = data.base_price_net;
-            modal.classList.add('active');
-        } catch (e) {
-            showToast(e.message, 'error');
-        }
-    }
+    // === Event Listeners ===
+    openModalBtn.addEventListener('click', () => setupModal(false));
+    closeModalBtn.addEventListener('click', () => serviceModal.classList.remove('active'));
+    serviceModal.addEventListener('click', e => (e.target === serviceModal) && serviceModal.classList.remove('active'));
 
-    function openModalForAdd() {
-        currentEditId = null;
-        modalTitle.textContent = 'Dodaj nową usługę';
-        modalSubmitButton.textContent = 'Dodaj usługę';
-        form.reset();
-        fpModal.setDate(new Date());
-        modal.classList.add('active');
-    }
+    serviceTypeSelect.addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        basePriceInput.value = selectedOption.dataset.price || '';
+        calculateFinalPrice();
+    });
 
-    openModalBtn.addEventListener('click', openModalForAdd);
-    closeModalBtn.addEventListener('click', () => modal.classList.remove('active'));
-    modal.addEventListener('click', e => (e.target === modal) && modal.classList.remove('active'));
+    [basePriceInput, discountValueInput, discountTypeSelect].forEach(el => {
+        el.addEventListener('input', calculateFinalPrice);
+    });
 
-    // --- Obsługa przycisków Edytuj/Usuń ---
+    clientNameInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredClients = allClients.filter(client =>
+            `${client.first_name} ${client.last_name}`.toLowerCase().includes(searchTerm)
+        );
+        updateClientDatalist(filteredClients);
+    });
+
     tbody.addEventListener('click', async e => {
         const target = e.target;
+        const id = target.dataset.id;
+        if (!id) return;
         if (target.classList.contains('edit-btn')) {
-            await openModalForEdit(parseInt(target.dataset.id, 10));
+            await setupModal(true, id);
         }
         if (target.classList.contains('delete-btn')) {
             if (confirm(`Czy na pewno chcesz usunąć usługę "${target.dataset.name}"?`)) {
                 try {
-                    const res = await fetch(`/api/services/${target.dataset.id}`, { method: 'DELETE' });
+                    const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
                     if (!res.ok) throw new Error('Błąd podczas usuwania');
                     showToast('Usługa usunięta.', 'success');
-                    await loadServices();
+                    await loadData();
                 } catch (error) {
                     showToast(error.message, 'error');
                 }
@@ -162,19 +252,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Obsługa wysyłki formularza ---
-    form.addEventListener('submit', async e => {
+    serviceForm.addEventListener('submit', async e => {
         e.preventDefault();
+        calculateFinalPrice();
         const payload = {
-            service_type_id: parseInt(form.elements.service_type_id.value, 10),
-            date: fpModal.formatDate(fpModal.selectedDates[0], "Y-m-d"),
-            base_price_net: parseFloat(form.elements.base_price_net.value)
+            service_type_id: parseInt(serviceForm.elements.service_type_id.value),
+            date: serviceForm.elements.date.value,
+            base_price_net: parseFloat(finalPriceHiddenInput.value),
+            client_name: serviceForm.elements.client_name.value.trim()
         };
-
         const isEditing = currentEditId !== null;
-        const url = isEditing ? `/api/services/${currentEditId}` : '/services/add'; // Używamy starego endpointu do dodawania
+        const url = isEditing ? `/api/services/${currentEditId}` : '/services/add';
         const method = isEditing ? 'PUT' : 'POST';
-
         try {
             const res = await fetch(url, {
                 method: method,
@@ -182,17 +271,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
             const result = await res.json();
-            if (!res.ok) throw new Error(result.detail || 'Wystąpił nieznany błąd');
+            if (!res.ok) throw new Error(result.detail || 'Błąd zapisu');
+
             showToast(isEditing ? 'Usługa zaktualizowana!' : 'Usługa dodana!', 'success');
-            modal.classList.remove('active');
-            await loadServices();
-        } catch (error) {
-            showToast(error.message, 'error');
+            serviceModal.classList.remove('active');
+            await loadData();
+
+            if (!isEditing && result.new_client) {
+                document.getElementById('new-client-id').value = result.new_client.id;
+                document.getElementById('new-client-name').textContent = `${result.new_client.first_name} ${result.new_client.last_name}`;
+                clientDetailsModal.classList.add('active');
+            }
+        } catch(err) {
+            showToast(err.message, 'error');
         }
     });
 
-    // --- Pierwsze załadowanie ---
-    loadServices();
+    clientDetailsForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const clientId = clientDetailsForm.elements.id.value;
+        const payload = {
+            phone_number: clientDetailsForm.elements.phone_number.value,
+            birth_date: clientDetailsForm.elements.birth_date.value || null,
+            source: clientDetailsForm.elements.source.value
+        };
+        try {
+            const res = await fetch(`/clients/api/${clientId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error('Błąd aktualizacji klienta');
+            showToast('Dane klienta zaktualizowane!', 'success');
+            clientDetailsModal.classList.remove('active');
+            await loadData();
+        } catch(err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // --- Start ---
+    loadData();
 });
 </script>
 {% endblock %}

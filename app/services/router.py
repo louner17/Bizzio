@@ -51,23 +51,51 @@ async def get_services_api(
             "service_type": {
                 "id": s.service_type.id,
                 "name": s.service_type.name
-            }
+            },
+            "client": {
+                "id": s.client.id,
+                "first_name": s.client.first_name,
+                "last_name": s.client.last_name
+            } if s.client else None
         } for s in services
     ]
 
-@router.get("/api/services/{service_id}", response_model=schemas.ServiceRecord)
+@router.get("/api/services/{service_id}", response_class=JSONResponse)
 async def get_service_api(service_id: int, db: Session = Depends(get_db)):
-    """Pobiera dane pojedynczej usługi."""
+    """Pobiera dane pojedynczej usługi i ręcznie buduje odpowiedź JSON."""
     db_service = crud.get_service(db, service_id=service_id)
     if db_service is None:
         raise HTTPException(status_code=404, detail="Usługa nie znaleziona")
-    return db_service
+
+    # Ręczne budowanie słownika odpowiedzi
+    response_data = {
+        "id": db_service.id,
+        "date": db_service.date.isoformat(),
+        "base_price_net": db_service.base_price_net,
+        "service_type_id": db_service.service_type_id,
+        "client_id": db_service.client_id,
+        "client": {
+            "id": db_service.client.id,
+            "first_name": db_service.client.first_name,
+            "last_name": db_service.client.last_name
+        } if db_service.client else None,
+        "service_type": {
+            "id": db_service.service_type.id,
+            "name": db_service.service_type.name
+        } if db_service.service_type else None
+    }
+
+    return JSONResponse(content=response_data)
 
 @router.put("/api/services/{service_id}", response_model=schemas.ServiceRecord)
-async def update_service_api(service_id: int, data: schemas.ServiceCreate, db: Session = Depends(get_db)):
-    """Aktualizuje istniejącą usługę."""
-    updated_service = crud.update_service(db, service_id=service_id, data=data)
-    if updated_service is None:
+async def update_service_api(
+    service_id: int,
+    service_data: schemas.ServiceCreate,
+    db: Session = Depends(get_db)
+):
+    """Aktualizuje dane istniejącej usługi."""
+    updated_service = crud.update_service(db, service_id=service_id, data=service_data)
+    if not updated_service:
         raise HTTPException(status_code=404, detail="Usługa nie znaleziona")
     return updated_service
 
@@ -88,30 +116,36 @@ async def get_categories_api(db: Session = Depends(get_db)):
         } for c in categories
     ]
 
-@router.post("/services/add", response_model=schemas.ServiceDisplay, status_code=status.HTTP_201_CREATED)
+
+@router.post("/services/add", status_code=status.HTTP_201_CREATED)
 async def add_service(
         service_data: schemas.ServiceCreate,
         db: Session = Depends(get_db)
 ):
     try:
-        # crud.create_service powinno dodać, zatwierdzić i odświeżyć model
-        db_service = crud.create_service(
-            db=db,
-            service_type_id=service_data.service_type_id,
-            date=service_data.date,
-            price=service_data.base_price_net
-        )
+        db_service, new_client = crud.create_service(db=db, service_data=service_data)
+
+        # Ręczne budowanie obiektu new_client, aby zapewnić poprawną strukturę
+        new_client_data = None
+        if new_client:
+            new_client_data = {
+                "id": new_client.id,
+                "first_name": new_client.first_name,
+                "last_name": new_client.last_name,
+                "phone_number": new_client.phone_number,
+                "source": new_client.source,
+                "birth_date": new_client.birth_date,
+                "date_added": new_client.date_added,
+                "survey_path": new_client.survey_path
+            }
+
         return {
             "success": True,
-            "service": {
-                "id": db_service.id,
-                "service_type_id": db_service.service_type_id,
-                "date": db_service.date,
-                "base_price_net": db_service.base_price_net
-            }
+            "service": schemas.ServiceRecord.from_orm(db_service),
+            "new_client": new_client_data
         }
 
-    except SQLAlchemyError as e:
+    except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -148,7 +182,9 @@ async def get_service_types_api(db: Session = Depends(get_db)):
                 "id": st.category.id,
                 "name": st.category.name
             },
-            "vat_rate": st.vat_rate.rate  # teraz zwracamy wartość VAT
+            "vat_rate": st.vat_rate.rate,
+            "default_price": st.default_price,
+            "duration_minutes": st.duration_minutes
         } for st in service_types
     ]
 
@@ -163,7 +199,8 @@ async def add_service_type_api(data: schemas.ServiceTypeCreate,
             db=db,
             name=data.name,
             category_id=data.service_category_id,
-            vat_rate_id=data.vat_rate_id
+            vat_rate_id=data.vat_rate_id,
+            default_price=data.default_price
         )
         return {
             "id": st.id,
@@ -235,7 +272,11 @@ async def add_service_category_api(category_data: schemas.ServiceCategoryCreate,
             status_code=status.HTTP_409_CONFLICT,
             detail="Kategoria o tej nazwie już istnieje"
         )
-    return crud.get_or_create_category(db=db, name=category_data.name)
+    return crud.get_or_create_category(
+        db=db,
+        name=category_data.name,
+        color=category_data.color
+    )
 
 # 4. Endpoint API do aktualizacji kategorii (PUT)
 @router.put("/api/service_categories/{category_id}", response_model=schemas.ServiceCategoryRecord)
@@ -243,7 +284,12 @@ async def update_service_category_api(category_id: int,
                                       category_data: schemas.ServiceCategoryCreate,
                                       db: Session = Depends(get_db)):
     """Aktualizuje istniejącą kategorię usługi."""
-    updated_category = crud.update_category(db, category_id=category_id, name=category_data.name)
+    updated_category = crud.update_category(
+        db,
+        category_id=category_id,
+        name=category_data.name,
+        color=category_data.color
+    )
     if not updated_category:
         raise HTTPException(status_code=404, detail="Kategoria nie znaleziona")
     return updated_category

@@ -13,13 +13,13 @@ class ContractorCreate(ContractorBase):
 class Contractor(ContractorBase):
     id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ExpenseCategory(BaseModel):
     id: int
     name: str
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ExpenseBase(BaseModel):
     invoice_number: str
@@ -53,7 +53,7 @@ class Expense(ExpenseBase):
     amount_vat: float
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ExpenseCategoryCreate(BaseModel):
     name: str
@@ -65,4 +65,4 @@ class ExpenseCategory(BaseModel):
     is_tax_deductible: bool = True # <-- DODAJ TĘ LINIĘ
 
     class Config:
-        orm_mode = True
+        from_attributes = True

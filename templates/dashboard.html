@@ -1,10 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<div class="page-header">
+    <h2 class="page-header-title"></h2>
+</div>
+
+<div class="grid">
+    <article class="card">
+        <h4>Zysk (bieżący miesiąc)</h4>
+        <h2 id="kpi-profit" class="kpi-value">Ładowanie...</h2>
+    </article>
+    <article class="card">
+        <h4>Przychód (bieżący miesiąc)</h4>
+        <h2 id="kpi-revenue" class="kpi-value">Ładowanie...</h2>
+    </article>
+    <article class="card">
+        <h4>Koszty (bieżący miesiąc)</h4>
+        <h2 id="kpi-costs" class="kpi-value">Ładowanie...</h2>
+    </article>
+</div>
+
+<div class="grid">
+    <article class="card">
+        <h3>Przychody vs Koszty (ostatnie 6 miesięcy)</h3>
+        <canvas id="revenueVsCostsChart"></canvas>
+    </article>
+    <article class="card">
+        <h3>Struktura Przychodów</h3>
+        <div class="chart-container-small">
+            <canvas id="revenueStructureChart"></canvas>
+        </div>
+    </article>
+</div>
+
+<div class="content-card">
+    <h3>Nadchodzące płatności</h3>
+    <table class="content-table">
+        <thead>
+            <tr><th>Opis</th><th>Termin płatności</th><th>Kwota</th></tr>
+        </thead>
+        <tbody id="upcoming-payments-tbody">
+            <tr><td colspan="3">Ładowanie...</td></tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('/dashboard/api');
+        if (!res.ok) throw new Error('Błąd pobierania danych dla dashboardu');
+        const data = await res.json();
+
+        // Wypełnianie kart KPI
+        const profitElement = document.getElementById('kpi-profit');
+        const revenueElement = document.getElementById('kpi-revenue');
+        const actualRevenue = data.kpi.revenue;
+        const potentialRevenue = data.kpi.potential_revenue;
+
+        let profitText = `${data.kpi.profit.toFixed(2)} PLN`;
+        if (potentialRevenue > 0) {
+            profitText += ` (+${potentialRevenue.toFixed(2)})`;
+        }
+        profitElement.textContent = profitText;
+
+
+        let revenueText = `${actualRevenue.toFixed(2)} PLN`;
+        if (potentialRevenue > 0) {
+            revenueText += ` (+${potentialRevenue.toFixed(2)})`;
+        }
+        revenueElement.textContent = revenueText;
+        document.getElementById('kpi-costs').textContent = `${data.kpi.costs.toFixed(2)} PLN`;
+
+        // Rysowanie wykresu Przychody vs Koszty
+        new Chart(document.getElementById('revenueVsCostsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.revenue_vs_costs_chart.labels,
+                datasets: [
+                    { label: 'Przychody', data: data.revenue_vs_costs_chart.revenue, backgroundColor: 'rgba(93, 95, 239, 0.7)' },
+                    { label: 'Koszty', data: data.revenue_vs_costs_chart.costs, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+                ]
+            }
+        });
+
+        // Rysowanie wykresu Struktury Przychodów
+        new Chart(document.getElementById('revenueStructureChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.revenue_structure_chart.labels,
+                datasets: [{ data: data.revenue_structure_chart.data }]
+            }
+        });
+
+        // Wypełnianie listy nadchodzących płatności
+        const paymentsTbody = document.getElementById('upcoming-payments-tbody');
+        paymentsTbody.innerHTML = data.upcoming_payments.length ? data.upcoming_payments.map(p => `
+            <tr>
+                <td>${p.description}</td>
+                <td>${p.due_date}</td>
+                <td>${p.amount.toFixed(2)} PLN</td>
+            </tr>
+        `).join('') : '<tr><td colspan="3">Brak nadchodzących płatności.</td></tr>';
+
+    } catch (e) {
+        console.error(e);
+        showToast(e.message, 'error');
+    }
+});
+</script>
+{% endblock %}

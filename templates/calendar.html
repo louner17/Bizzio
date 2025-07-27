@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="content-card" style="padding: 1.5rem;">
+    <div id='calendar'></div>
+</div>
+
+<div id="appointment-form-modal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="modal-close-button">&times;</button>
+        <h3 id="modal-title">Nowa wizyta</h3>
+        <form id="appointment-form">
+            <input type="hidden" name="id">
+
+            <label for="client_name">Klient</label>
+            <input type="text" id="client_name" name="client_name" list="clients-datalist" placeholder="Wpisz lub wybierz..." required>
+            <datalist id="clients-datalist"></datalist>
+
+            <label for="service_type_id">Typ usługi</label>
+            <select id="service_type_id" name="service_type_id" required>
+                </select>
+
+            <div class="grid">
+                <label>Początek wizyty<input type="text" id="start_time" name="start" required></label>
+                <label>Koniec wizyty<input type="text" id="end_time" name="end" required></label>
+            </div>
+
+            <label for="base_price_input">Cena podstawowa (PLN)</label>
+            <input type="number" id="base_price_input" step="0.01">
+
+            <div class="grid">
+                <label>Zniżka <input type="number" id="discount_value" step="0.01" placeholder="Wartość"></label>
+                <label>Typ zniżki
+                    <select id="discount_type">
+                        <option value="amount">PLN</option><option value="percent">%</option>
+                    </select>
+                </label>
+            </div>
+            <hr>
+            <h4 style="text-align: right;">Cena końcowa: <span id="final-price">0.00</span> PLN</h4>
+            <hr>
+            <input type="hidden" id="final_price_hidden" name="price">
+
+            <label for="description">Opis / Notatki</label>
+            <textarea id="description" name="description" rows="3"></textarea>
+
+            <button type="submit" class="primary-button" id="modal-submit-button">Zapisz</button>
+        </form>
+    </div>
+</div>
+
+<div id="appointment-details-modal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="modal-close-button">&times;</button>
+        <h3 id="details-modal-title">Szczegóły wizyty</h3>
+        <div id="details-modal-body">
+            <p><strong>Klient:</strong> <span id="detail-client"></span></p>
+            <p><strong>Usługa:</strong> <span id="detail-service"></span></p>
+            <p><strong>Cena:</strong> <span id="detail-price"></span> PLN</p>
+            <p><strong>Opis:</strong> <span id="detail-description"></span></p>
+        </div>
+        <hr>
+        <div class="page-header-right">
+            <button class="button" id="details-edit-btn">Edytuj</button>
+            <button class="button" id="details-cancel-btn" style="background-color: var(--text-secondary);">Anuluj wizytę</button>
+            <button class="button primary-button" id="details-complete-btn">Oznacz jako wykonaną</button>
+        </div>
+    </div>
+</div>
+
+<div id="client-details-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>Uzupełnij dane nowego klienta</h3>
+        <p>Klient <strong id="new-client-name"></strong> został dodany. Uzupełnij jego dane.</p>
+        <form id="client-details-form">
+            <input type="hidden" id="new-client-id" name="id">
+            <label>Numer telefonu<input type="tel" name="phone_number" maxlength="9"></label>
+            <label>Data urodzenia<input type="text" id="client-birth-date" name="birth_date"></label>
+            <label>Źródło pozyskania
+                <select name="source">
+                    <option value="">-- Wybierz --</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Google Maps">Google Maps</option>
+                    <option value="Polecenie">Polecenie</option>
+                    <option value="Inne">Inne</option>
+                </select>
+            </label>
+            <button type="submit" class="primary-button">Zapisz i zamknij</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // === Elementy DOM (zebrane w jednym miejscu) ===
+    const calendarEl = document.getElementById('calendar');
+
+    // Modal formularza
+    const formModal = document.getElementById('appointment-form-modal');
+    const form = document.getElementById('appointment-form');
+    const formModalTitle = document.getElementById('modal-title');
+    const formModalSubmitButton = document.getElementById('modal-submit-button');
+    const serviceTypeSelect = document.getElementById('service_type_id');
+    const basePriceInput = document.getElementById('base_price_input');
+    const discountValueInput = document.getElementById('discount_value');
+    const discountTypeSelect = document.getElementById('discount_type');
+    const finalPriceSpan = document.getElementById('final-price');
+    const finalPriceHiddenInput = document.getElementById('final_price_hidden');
+    const clientNameInput = document.getElementById('client_name');
+
+    // Modal szczegółów
+    const detailsModal = document.getElementById('appointment-details-modal');
+    const clientDetailsModal = document.getElementById('client-details-modal');
+    const clientDetailsForm = document.getElementById('client-details-form');
+
+    // Zmienne globalne skryptu
+    let currentEditId = null;
+    let allServiceTypes = [];
+    let allClients = [];
+
+    // === Inicjalizacja ===
+    const fpStart = flatpickr(form.elements.start, {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        locale: "pl",
+        time_24hr: true,
+        onChange: function() { autoCalculateEndTime(); }
+    });
+    const fpEnd = flatpickr(form.elements.end, { enableTime: true, dateFormat: "Y-m-d H:i", locale: "pl", time_24hr: true });
+    flatpickr(clientDetailsForm.elements.birth_date, { dateFormat: "Y-m-d", locale: "pl", allowInput: true });
+
+    // === Logika Kalkulatora Ceny i Czasu ===
+    function autoCalculateEndTime() {
+        const selectedOption = serviceTypeSelect.options[serviceTypeSelect.selectedIndex];
+        if (!selectedOption || !selectedOption.dataset.duration) return;
+        const duration = parseInt(selectedOption.dataset.duration, 10);
+        const startDate = fpStart.selectedDates[0];
+        if (!isNaN(duration) && startDate) {
+            const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+            fpEnd.setDate(endDate, true);
+        }
+    }
+
+    function calculateFinalPrice() {
+        const basePrice = parseFloat(basePriceInput.value) || 0;
+        const discountValue = parseFloat(discountValueInput.value) || 0;
+        const discountType = discountTypeSelect.value;
+        let finalPrice = basePrice;
+        if (discountValue > 0) {
+            finalPrice = (discountType === 'percent') ? basePrice * (1 - discountValue / 100) : basePrice - discountValue;
+        }
+        finalPrice = Math.max(0, finalPrice);
+        finalPriceSpan.textContent = finalPrice.toFixed(2);
+        finalPriceHiddenInput.value = finalPrice.toFixed(2);
+    }
+    [basePriceInput, discountValueInput, discountTypeSelect].forEach(el => el.addEventListener('input', calculateFinalPrice));
+
+    serviceTypeSelect.addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        basePriceInput.value = selectedOption.dataset.price || '';
+        calculateFinalPrice();
+        autoCalculateEndTime();
+    });
+
+    // === Obsługa Modala Formularza ===
+    function setupFormModal(isEditing, data) {
+        form.reset();
+        currentEditId = isEditing ? data.id : null;
+        formModalTitle.textContent = isEditing ? 'Edytuj wizytę' : 'Nowa wizyta';
+        formModalSubmitButton.textContent = isEditing ? 'Zapisz zmiany' : 'Dodaj wizytę';
+
+        fpStart.setDate(data.start, true);
+        fpEnd.setDate(data.end, true);
+
+        if (isEditing) {
+            form.elements.client_name.value = data.title;
+            form.elements.service_type_id.value = data.extendedProps.serviceTypeId;
+            basePriceInput.value = data.extendedProps.price;
+            form.elements.description.value = data.extendedProps.description || '';
+        } else {
+            basePriceInput.value = '';
+
+            const clickedDate = new Date(data.start);
+            const dayOfWeek = clickedDate.getDay(); // 0 = Niedziela, 6 = Sobota
+
+            // Sprawdzamy, czy kliknięty dzień to weekend
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+            // Szukamy w pamięci podręcznej usługi "Makijaż okolicznościowy"
+            const makeupService = allServiceTypes.find(st => st.name === "Makijaż okolicznościowy");
+            if (makeupService) {
+                // Jeśli znaleziono, ustawiamy ją jako domyślną
+                serviceTypeSelect.value = makeupService.id;
+            }
+        }
+        }
+        serviceTypeSelect.dispatchEvent(new Event('change'));
+        calculateFinalPrice();
+        autoCalculateEndTime();
+        formModal.classList.add('active');
+    }
+
+    formModal.querySelector('.modal-close-button').addEventListener('click', () => formModal.classList.remove('active'));
+
+    // === Inicjalizacja Kalendarza ===
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+        initialView: 'timeGridWeek',
+        locale: 'pl',
+        buttonText: { today: 'dzisiaj', month: 'miesiąc', week: 'tydzień', day: 'dzień' },
+        height: 'auto',
+        editable: true,
+        selectable: true,
+        nowIndicator: true,
+        eventContent: function(info) {
+            let title = document.createElement('div');
+            title.classList.add('fc-event-title');
+            title.innerHTML = info.event.title;
+
+            let serviceName = document.createElement('div');
+            serviceName.classList.add('fc-event-service-name');
+            const startTime = info.event.start.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+            const endTime = info.event.end.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+
+            serviceName.innerHTML = `${info.event.extendedProps.serviceName} | ${startTime} - ${endTime}`;
+
+            let description = document.createElement('div');
+            if (info.event.extendedProps.description) {
+                description.classList.add('fc-event-description');
+                description.style.fontSize = '0.8em';
+                description.style.opacity = '0.7';
+                description.style.whiteSpace = 'nowrap';
+                description.style.overflow = 'hidden';
+                description.style.textOverflow = 'ellipsis';
+                description.innerHTML = `<i class="ri-information-line"></i> ${info.event.extendedProps.description}`;
+            }
+
+            let phoneNumber = document.createElement('div');
+            phoneNumber.classList.add('fc-event-phone');
+            phoneNumber.innerHTML = `<i class="ri-phone-line"></i> ${info.event.extendedProps.phoneNumber || ''}`;
+
+            return { domNodes: [title, serviceName, description, phoneNumber] };
+        },
+        events: '/api/calendar/events',
+        dateClick: (info) => setupFormModal(false, { start: info.date, end: new Date(info.date.getTime() + 60 * 60 * 1000) }),
+        eventClick: function(info) {
+            const event = info.event;
+            document.getElementById('details-modal-title').textContent = `Wizyta ${event.start.toLocaleDateString('pl-PL', {day: '2-digit', month: '2-digit', year: 'numeric'})}`;
+            document.getElementById('detail-client').textContent = event.title;
+            document.getElementById('detail-service').textContent = event.extendedProps.serviceName;
+            document.getElementById('detail-price').textContent = event.extendedProps.price.toFixed(2);
+            document.getElementById('detail-description').textContent = event.extendedProps.description || 'Brak opisu';
+
+            document.getElementById('details-complete-btn').dataset.id = event.id;
+            document.getElementById('details-edit-btn').dataset.id = event.id;
+            document.getElementById('details-cancel-btn').dataset.id = event.id;
+
+            detailsModal.classList.add('active');
+        },
+        eventDrop: function(info) {
+            if (!confirm("Czy na pewno chcesz przenieść tę wizytę?")) {
+                info.revert();
+            } else {
+                const payload = { start: info.event.start.toISOString(), end: info.event.end.toISOString() };
+                fetch(`/api/calendar/events/${info.event.id}`, {
+                    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                }).then(res => {
+                    if (res.ok) { showToast('Wizyta przeniesiona!', 'success');
+                    } else { showToast('Błąd podczas przenoszenia wizyty.', 'error'); info.revert(); }
+                });
+            }
+        }
+    });
+
+    // === Event Listeners dla Modala Szczegółów ===
+    detailsModal.querySelector('.modal-close-button').addEventListener('click', () => detailsModal.classList.remove('active'));
+
+    document.getElementById('details-complete-btn').addEventListener('click', async (e) => {
+        const eventId = e.target.dataset.id;
+        if (confirm('Czy na pewno chcesz oznaczyć tę wizytę jako wykonaną i dodać ją do rejestru usług?')) {
+            try {
+                const res = await fetch(`/api/calendar/events/${eventId}/complete`, { method: 'POST' });
+                if (!res.ok) throw new Error('Błąd zapisu');
+                showToast('Wizyta oznaczona jako wykonana!', 'success');
+                detailsModal.classList.remove('active');
+                calendar.refetchEvents();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+    });
+
+    document.getElementById('details-cancel-btn').addEventListener('click', async (e) => {
+    const eventId = e.target.dataset.id;
+
+    // Prosimy użytkownika o podanie powodu
+    const reason = prompt("Podaj powód anulowania wizyty (np. Klientka odwołała, Nie przyszła):");
+
+    // Jeśli użytkownik podał powód i nie kliknął "Anuluj"
+    if (reason) {
+        const formData = new FormData();
+        formData.append('reason', reason);
+
+        try {
+            const res = await fetch(`/api/calendar/events/${eventId}/cancel`, {
+                method: 'POST',
+                body: formData
+            });
+            if (!res.ok) throw new Error('Błąd podczas anulowania wizyty');
+
+            showToast('Wizyta została anulowana.', 'success');
+            detailsModal.classList.remove('active');
+            calendar.refetchEvents(); // Odśwież kalendarz, aby wizyta zniknęła lub zmieniła styl
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    }
+});
+
+    document.getElementById('details-edit-btn').addEventListener('click', async (e) => {
+        detailsModal.classList.remove('active');
+        const eventId = e.target.dataset.id;
+        const event = calendar.getEventById(eventId);
+        const fullEventData = {
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            extendedProps: {
+                price: event.extendedProps.price,
+                description: event.extendedProps.description,
+                serviceTypeId: event.extendedProps.serviceTypeId
+            }
+        };
+        setupFormModal(true, fullEventData);
+    });
+
+    // === Obsługa Formularza Głównego ===
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        calculateFinalPrice();
+        const isEditing = currentEditId !== null;
+        const payload = {
+            title: form.elements.client_name.value,
+            start: fpStart.formatDate(fpStart.selectedDates[0], "Y-m-d H:i"),
+            end: fpEnd.formatDate(fpEnd.selectedDates[0], "Y-m-d H:i"),
+            service_type_id: parseInt(form.elements.service_type_id.value),
+            client_name: form.elements.client_name.value.trim(),
+            price: parseFloat(finalPriceHiddenInput.value),
+            description: form.elements.description.value
+        };
+
+        const url = isEditing ? `/api/calendar/events/${currentEditId}` : '/api/calendar/events';
+        const method = isEditing ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.detail || 'Błąd zapisu');
+
+            showToast(isEditing ? 'Wizyta zaktualizowana!' : 'Wizyta dodana!', 'success');
+            formModal.classList.remove('active');
+
+            if (!isEditing && result.new_client) {
+                document.getElementById('new-client-id').value = result.new_client.id;
+                document.getElementById('new-client-name').textContent = `${result.new_client.first_name} ${result.new_client.last_name}`;
+                clientDetailsModal.classList.add('active');
+            } else {
+                calendar.refetchEvents();
+            }
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    clientNameInput.addEventListener('change', async (e) => {
+    const selectedName = e.target.value;
+    // Znajdź pełny obiekt klienta w naszej podręcznej liście
+    const client = allClients.find(c => `${c.first_name} ${c.last_name}` === selectedName);
+
+    if (client) {
+        try {
+            // Jeśli znaleziono klienta, zapytaj API o jego ostatnią usługę
+            const res = await fetch(`/clients/api/${client.id}/last-service`);
+            if (!res.ok) return; // Ignoruj błędy, po prostu nie ustawiaj domyślnej
+
+            const data = await res.json();
+            if (data.last_service_type_id) {
+                // Ustaw znalezioną usługę jako wybraną w dropdownie
+                serviceTypeSelect.value = data.last_service_type_id;
+                // Ręcznie wywołaj zdarzenie 'change', aby zaktualizować cenę i czas
+                serviceTypeSelect.dispatchEvent(new Event('change'));
+            }
+        } catch (err) {
+            console.error("Błąd pobierania ostatniej usługi:", err);
+        }
+    }
+});
+
+    // === Obsługa Formularza Danych Klienta ===
+    clientDetailsForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const clientId = clientDetailsForm.elements.id.value;
+        const payload = {
+            phone_number: clientDetailsForm.elements.phone_number.value,
+            birth_date: clientDetailsForm.elements.birth_date.value || null,
+            source: clientDetailsForm.elements.source.value
+        };
+        try {
+            const res = await fetch(`/clients/api/${clientId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error('Błąd aktualizacji klienta');
+            showToast('Dane klienta zaktualizowane!', 'success');
+            clientDetailsModal.classList.remove('active');
+            calendar.refetchEvents();
+        } catch(err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+
+    // === Pobranie danych i start ===
+    async function initialize() {
+        try {
+            const clientsRes = await fetch('/clients/api');
+            allClients = await clientsRes.json();
+            document.getElementById('clients-datalist').innerHTML = allClients.map(c => `<option value="${c.first_name} ${c.last_name}">`).join('');
+
+            const serviceTypesRes = await fetch('/api/service_types');
+            allServiceTypes = await serviceTypesRes.json();
+            document.getElementById('service_type_id').innerHTML = `<option value="">-- Wybierz --</option>` + allServiceTypes.map(st => `<option value="${st.id}" data-price="${st.default_price || ''}" data-duration="${st.duration_minutes || ''}">${st.name}</option>`).join('');
+
+            calendar.render();
+        } catch (err) {
+            showToast('Błąd inicjalizacji kalendarza: ' + err.message, 'error');
+        }
+    }
+
+    initialize();
+});
+</script>
+{% endblock %}

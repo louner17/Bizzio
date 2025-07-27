@@ -38,7 +38,8 @@ app.include_router(reports_router, dependencies=[Depends(get_current_user)])
 
 @app.on_event("startup")
 def startup_event():
-    run_startup_event()
+    #run_startup_event()
+    pass
 
 # Główna strona, która przekierowuje do panelu
 @app.get("/", response_class=RedirectResponse, dependencies=[Depends(get_current_user)])

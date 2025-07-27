@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
 
-from database_prod import Base, engine
+from database_prod import connect_to_db, Base, engine
 
 # Importujemy funkcję uruchomienia bazy danych i początkowych danych
 from app.services.router import router as services_router
@@ -16,6 +16,13 @@ from app.reports.router import router as reports_router
 from app.auth.router import router as auth_router, get_current_user
 
 app = FastAPI()
+
+@app.on_event("startup")
+def startup_event():
+    # Połączenie z bazą jest inicjowane dopiero TUTAJ
+    connect_to_db()
+    # Tworzymy tabele, jeśli nie istnieją
+    Base.metadata.create_all(bind=engine)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)

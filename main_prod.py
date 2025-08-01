@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from database_prod import Base, get_engine
 import os
 
 from app.auth.router import get_current_user
@@ -17,10 +18,11 @@ from app.auth.router import router as auth_router
 
 app = FastAPI()
 
-# Zdarzenie startowe jest na razie wyłączone
-# @app.on_event("startup")
-# def startup_event():
-#     ...
+@app.on_event("startup")
+def startup_event():
+    eng = get_engine()
+    import app.services.models, app.costs.models, app.clients.models, app.calendar.models
+    Base.metadata.create_all(bind=eng)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)

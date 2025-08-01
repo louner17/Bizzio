@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
 
-from database_prod import Base, engine
+from database_prod import connect_db, Base, engine
 from app.auth.router import get_current_user
 from app.services.router import router as services_router
 from app.costs.router import router as costs_router
@@ -18,11 +18,8 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup_event():
-    # Importujemy modele tutaj, aby mieć pewność, że Base je widzi
-    import app.services.models
-    import app.costs.models
-    import app.clients.models
-    import app.calendar.models
+    connect_db()
+    import app.services.models, app.costs.models, app.clients.models, app.calendar.models
     Base.metadata.create_all(bind=engine)
 
 SECRET_KEY = os.getenv("SECRET_KEY")

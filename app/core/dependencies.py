@@ -1,14 +1,14 @@
 import os
 
 # Dynamicznie decydujemy, którego pliku bazy użyć
-if os.getenv("K_SERVICE"): # Jeśli jesteśmy na Google Cloud
+if os.getenv("K_SERVICE"):
     from database_prod import SessionLocal
-else: # Jeśli jesteśmy lokalnie
+else:
     from database import SessionLocal
 
 def get_db():
     if SessionLocal is None:
-        raise Exception("Połączenie z bazą danych nie zostało zainicjowane.")
+        raise Exception("Aplikacja nie jest połączona z bazą danych.")
     db = SessionLocal()
     try:
         yield db

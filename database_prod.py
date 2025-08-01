@@ -4,31 +4,29 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
+# Używamy oficjalnej metody połączenia z Cloud SQL Connector
+from google.cloud.sql.connector import Connector, IPTypes
+
+# Inicjalizacja connectora
+connector = Connector()
+
+# Funkcja do pobierania połączenia
+def getconn():
+    conn = connector.connect(
+        os.environ["INSTANCE_CONNECTION_NAME"],
+        "pg8000",
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASS"],
+        db=os.environ["DB_NAME"],
+        ip_type=IPTypes.PRIVATE  # Użyj PRIVATE dla bezpieczniejszego połączenia
+    )
+    return conn
+
+# Tworzymy silnik SQLAlchemy
+engine = create_engine(
+    "postgresql+pg8000://",
+    creator=getconn,
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-engine = None
-SessionLocal = None
-
-def get_engine():
-    global engine
-    if engine is None:
-        db_user = os.getenv("DB_USER")
-        db_pass = os.getenv("DB_PASS")
-        db_name = os.getenv("DB_NAME")
-        instance_connection_name = os.getenv("INSTANCE_CONNECTION_NAME")
-
-        if not all([db_user, db_pass, db_name, instance_connection_name]):
-            raise ValueError("Brak wszystkich zmiennych środowiskowych do połączenia z bazą.")
-
-        SQLALCHEMY_DATABASE_URL = (
-            f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}"
-            f"?host=/cloudsql/{instance_connection_name}"
-        )
-        engine = create_engine(SQLALCHEMY_DATABASE_URL)
-    return engine
-
-def get_session_local():
-    global SessionLocal
-    if SessionLocal is None:
-        eng = get_engine()
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=eng)
-    return SessionLocal

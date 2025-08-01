@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
+from fastapi.templating import Jinja2Templates
 from app.core.dependencies import get_db
 from app.services import crud as services_crud
 from app.costs import crud as costs_crud
@@ -10,6 +11,12 @@ from app.clients import crud as clients_crud
 from app.calendar import crud as calendar_crud
 
 router = APIRouter(tags=["Dashboard"])
+templates = Jinja2Templates(directory="templates")
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    """Wyświetla stronę HTML dashboardu."""
+    return templates.TemplateResponse("dashboard.html", {"request": request, "page_title": "Dashboard"})
 
 
 @router.get("/dashboard/api")

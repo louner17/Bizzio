@@ -25,3 +25,5 @@ attachments/surveys
 
 .attachments/expenses
 .attachments/surveys
+
+cloud-sql-proxy.exe

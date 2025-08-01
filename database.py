@@ -2,23 +2,19 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
-# Sprawdź, czy aplikacja działa w środowisku Google Cloud Run
-# GCP automatycznie ustawia tę zmienną środowiskową
-if os.getenv("K_SERVICE"):
-    # Połączenie z bazą Cloud SQL przez Unix Socket (najbezpieczniejsza metoda)
-    db_user = os.environ["DB_USER"]      # np. postgres
-    db_pass = os.environ["DB_PASS"]      # Hasło, które ustawisz w GCP
-    db_name = os.environ["DB_NAME"]      # np. postgres
-    instance_connection_name = os.environ["INSTANCE_CONNECTION_NAME"] # np. twoj-projekt:region:twoja-instancja
+load_dotenv()
 
-    SQLALCHEMY_DATABASE_URL = (
-        f"postgresql+psycopg2://{db_user}:{db_pass}@/{db_name}"
-        f"?host=/cloudsql/{instance_connection_name}"
-    )
+if os.getenv("DB_HOST"): # Jeśli testujemy lokalnie z bazą PostgreSQL
+    db_user = os.getenv("DB_USER")
+    db_pass = os.getenv("DB_PASS")
+    db_name = os.getenv("DB_NAME")
+    db_host = os.getenv("DB_HOST")
+    db_port = os.getenv("DB_PORT")
+    SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
     engine = create_engine(SQLALCHEMY_DATABASE_URL)
-else:
-    # Jeśli działamy lokalnie, użyj pliku SQLite
+else: # Domyślnie używamy lokalnego pliku SQLite
     SQLALCHEMY_DATABASE_URL = "sqlite:///./data.db"
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

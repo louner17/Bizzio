@@ -86,8 +86,8 @@ async def update_event(event_id: int, update_data: schemas.AppointmentUpdate, db
     if update_data.end:
         update_data.end = convert_to_naive_warsaw(update_data.end)
 
-    if update_data.start and update_data.start < datetime.now():
-        raise HTTPException(status_code=400, detail="Nie można przenosić wizyt w przeszłość.")
+    # if update_data.start and update_data.start < datetime.now():
+    #     raise HTTPException(status_code=400, detail="Nie można przenosić wizyt w przeszłość.")
 
     if update_data.start and update_data.end and crud.check_for_overlap(db, start_time=update_data.start,
                                                                         end_time=update_data.end,

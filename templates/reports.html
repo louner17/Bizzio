@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h2 class="page-header-title">Raporty</h2>
+    <h2 class="page-header-title"></h2>
     <div class="page-header-right">
         <label for="period-select" style="margin-bottom: 0;">
             <select id="period-select">
@@ -95,85 +95,84 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderChart(reportKey) {
-        if (currentChart) currentChart.destroy();
-        if (!reportData || !reportData[reportKey]) {
-            chartTitle.textContent = 'Brak danych dla tego raportu.';
-            return;
-        };
+    if (currentChart) currentChart.destroy();
+    if (!reportData || !reportData[reportKey] || !reportData[reportKey].labels) {
+        chartTitle.textContent = 'Brak danych dla tego raportu.';
+        return;
+    }
 
-        const data = reportData[reportKey];
-        let chartConfig;
-
-        if (reportKey === 'expense_breakdown' || reportKey === 'revenue_structure') {
-            chartWrapper.classList.add('chart-container-small');
-        } else {
-            chartWrapper.classList.remove('chart-container-small');
-        }
-        const chartOptions = {
+    const data = reportData[reportKey];
+    let chartConfig;
+    const chartOptions = {
         responsive: true,
         maintainAspectRatio: false
-        };
-
-        switch (reportKey) {
-            case 'financial_summary':
-                chartTitle.textContent = 'Zestawienie Finansowe';
-                chartConfig = {
-                    type: 'line',
-                    data: {
-                        labels: data.labels,
-                        datasets: [
-                            { label: 'Przychód', data: data.revenue, borderColor: '#5D5FEF', backgroundColor: 'rgba(93, 95, 239, 0.1)', fill: true, tension: 0.2 },
-                            { label: 'Koszt', data: data.costs, borderColor: '#FF7A85', backgroundColor: 'rgba(255, 122, 133, 0.1)', fill: true, tension: 0.2 },
-                            { label: 'Zysk', data: data.profit, borderColor: '#4FD1C5', backgroundColor: 'rgba(79, 209, 197, 0.1)', fill: true, tension: 0.2 }
-                        ]
-                    },
-                    options: chartOptions
-                };
-                break;
-            case 'expense_breakdown':
-                chartTitle.textContent = 'Podział Kosztów';
-                chartConfig = { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.data }] }, options: chartOptions };
-                break;
-            case 'revenue_structure':
-                chartTitle.textContent = 'Struktura Przychodów';
-                chartConfig = { type: 'pie', data: { labels: data.labels, datasets: [{ data: data.data }] }, options: chartOptions };
-                break;
-            case 'service_popularity':
-                chartTitle.textContent = 'Popularność Usług';
-                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba wykonanych usług', data: data.data, backgroundColor: 'rgba(93, 95, 239, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
-                break;
-            case 'client_sources':
-                chartTitle.textContent = 'Źródła Pozyskania Klientów';
-                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba klientów', data: data.data, backgroundColor: 'rgba(79, 209, 197, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
-                break;
-            case 'forecasted_revenue':
-                chartTitle.textContent = 'Prognoza Przychodów';
-                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Potencjalny przychód', data: data.data, backgroundColor: 'rgba(93, 95, 239, 0.7)' }] }, options: chartOptions};
-                break;
-
-            case 'forecasted_services':
-                chartTitle.textContent = 'Prognoza Usług ';
-                chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba zaplanowanych wizyt', data: data.data, backgroundColor: 'rgba(79, 209, 197, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
-                break;
-            case 'forecasted_service_count':
-    chartTitle.textContent = 'Trend Planowanych Wizyt';
-    chartConfig = {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: data.datasets
-        },
-        options: chartOptions
     };
-    break;
-}
-        if (chartConfig) {
-        // Upewnijmy się, że dane są poprawne
+
+    if (reportKey === 'expense_breakdown' || reportKey === 'revenue_structure') {
+        chartWrapper.classList.add('chart-container-small');
+    } else {
+        chartWrapper.classList.remove('chart-container-small');
+    }
+
+    switch (reportKey) {
+        case 'financial_summary':
+            chartTitle.textContent = 'Zestawienie Finansowe';
+            chartConfig = {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { label: 'Przychód', data: data.revenue, borderColor: '#5D5FEF', backgroundColor: 'rgba(93, 95, 239, 0.1)', fill: true, tension: 0.2 },
+                        { label: 'Koszt', data: data.costs, borderColor: '#FF7A85', backgroundColor: 'rgba(255, 122, 133, 0.1)', fill: true, tension: 0.2 },
+                        { label: 'Zysk', data: data.profit, borderColor: '#4FD1C5', backgroundColor: 'rgba(79, 209, 197, 0.1)', fill: true, tension: 0.2 }
+                    ]
+                },
+                options: chartOptions
+            };
+            break;
+        case 'expense_breakdown':
+            chartTitle.textContent = 'Podział Kosztów';
+            chartConfig = { type: 'doughnut', data: { labels: data.labels, datasets: [{ data: data.data }] }, options: chartOptions };
+            break;
+        case 'revenue_structure':
+            chartTitle.textContent = 'Struktura Przychodów';
+            chartConfig = { type: 'pie', data: { labels: data.labels, datasets: [{ data: data.data }] }, options: chartOptions };
+            break;
+        case 'service_popularity':
+            chartTitle.textContent = 'Popularność Usług';
+            chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba wykonanych usług', data: data.data, backgroundColor: 'rgba(93, 95, 239, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
+            break;
+        case 'client_sources':
+            chartTitle.textContent = 'Źródła Pozyskania Klientów';
+            chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba klientów', data: data.data, backgroundColor: 'rgba(79, 209, 197, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
+            break;
+        case 'forecasted_revenue':
+            chartTitle.textContent = 'Prognoza Przychodów';
+            chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Potencjalny przychód', data: data.data, backgroundColor: 'rgba(93, 95, 239, 0.7)' }] }, options: chartOptions };
+            break;
+        case 'forecasted_services':
+            chartTitle.textContent = 'Prognoza Usług';
+            chartConfig = { type: 'bar', data: { labels: data.labels, datasets: [{ label: 'Liczba zaplanowanych wizyt', data: data.data, backgroundColor: 'rgba(79, 209, 197, 0.7)' }] }, options: { ...chartOptions, indexAxis: 'y' } };
+            break;
+        case 'forecasted_service_count':
+            chartTitle.textContent = 'Trend Planowanych Wizyt (z podziałem na usługi)';
+            chartConfig = {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: data.datasets
+                },
+                options: chartOptions
+            };
+            break;
+    } // Koniec instrukcji switch
+
+    if (chartConfig) {
         chartConfig.data.datasets.forEach(dataset => {
             if (!dataset.data) dataset.data = [];
         });
         currentChart = new Chart(chartContext, chartConfig);
-        }
+    }
 }
 
     // === Event Listeners ===

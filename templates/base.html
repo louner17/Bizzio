@@ -94,11 +94,16 @@
         <main class="main-content">
             {# Górny pasek (Top Bar) - można go przenieść do oddzielnego bloku w przyszłości #}
             <header class="top-bar">
-                <div class="top-bar-left">
-                    {# Tutaj np. nazwa aktualnej podstrony #}
-                    <h1 class="page-title">{{ title | default('Dashboard') }}</h1>
-                </div>
-            </header>
+    <div class="top-bar-left">
+        <h1 class="page-title">{{ title | default('Dashboard') }}</h1>
+    </div>
+    <div class="page-header-right">
+        {% if request.session.user %}
+        <span>Witaj, {{ request.session.user.given_name }}</span>
+        <a href="/logout" role="button" class="secondary" style="margin-left: 1rem;">Wyloguj</a>
+        {% endif %}
+    </div>
+</header>
 
             <div class="content-area">
                 {% block content %}{% endblock %}

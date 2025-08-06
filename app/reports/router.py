@@ -1,11 +1,13 @@
 # plik: app/reports/router.py
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, desc
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
+from fastapi.templating import Jinja2Templates
 
 from app.core.dependencies import get_db
 from app.services import models as services_models
@@ -15,6 +17,11 @@ from app.calendar import models as calendar_models  # Upewnijmy się, że ten im
 
 router = APIRouter(tags=["Reports"])
 
+templates = Jinja2Templates(directory="templates")
+
+@router.get("/reports", response_class=HTMLResponse)
+async def reports_page(request: Request):
+    return templates.TemplateResponse("reports.html", {"request": request, "page_title": "Raporty"})
 
 @router.get("/api/reports")
 async def get_reports_data(period: str = '3m', db: Session = Depends(get_db)):

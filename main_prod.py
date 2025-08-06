@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
 
+from fastapi.templating import Jinja2Templates
+
 from database_prod import Base, engine
 from app.services.router import router as services_router
 from app.costs.router import router as costs_router
@@ -29,6 +31,8 @@ os.makedirs("attachments", exist_ok=True)
 # Montowanie folderów statycznych
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/attachments", StaticFiles(directory="attachments"), name="attachments")
+
+templates = Jinja2Templates(directory="templates")
 
 # Dołączanie routerów
 app.include_router(auth_router)

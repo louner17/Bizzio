@@ -22,8 +22,14 @@ app = FastAPI()
 SECRET_KEY = os.getenv("SECRET_KEY", "domyslny_sekret_do_testow_lokalnych")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/attachments", StaticFiles(directory="attachments"), name="attachments")
+STATIC_DIR = "static"
+ATTACHMENTS_DIR = "attachments"
+
+os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/attachments", StaticFiles(directory=ATTACHMENTS_DIR), name="attachments")
 templates = Jinja2Templates(directory="templates")
 
 app.include_router(auth_router) # Router logowania - dostępny dla wszystkich

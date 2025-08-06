@@ -2,19 +2,15 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
-load_dotenv()
+# Pobierz adres URL do bazy danych ze zmiennej środowiskowej
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if os.getenv("DB_HOST"): # Jeśli testujemy lokalnie z bazą PostgreSQL
-    db_user = os.getenv("DB_USER")
-    db_pass = os.getenv("DB_PASS")
-    db_name = os.getenv("DB_NAME")
-    db_host = os.getenv("DB_HOST")
-    db_port = os.getenv("DB_PORT")
-    SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
-else: # Domyślnie używamy lokalnego pliku SQLite
+# Jeśli aplikacja działa na serwerze (gdzie ustawimy DATABASE_URL), połącz się z PostgreSQL
+if DATABASE_URL:
+    engine = create_engine(DATABASE_URL)
+# W przeciwnym razie (lokalnie), użyj pliku SQLite
+else:
     SQLALCHEMY_DATABASE_URL = "sqlite:///./data.db"
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

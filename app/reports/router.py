@@ -19,11 +19,11 @@ router = APIRouter(tags=["Reports"])
 
 templates = Jinja2Templates(directory="templates")
 
-@router.get("/reports", response_class=HTMLResponse)
-async def reports_page(request: Request):
-    return templates.TemplateResponse("reports.html", {"request": request, "page_title": "Raporty"})
+# @router.get("/reports", response_class=HTMLResponse)
+# async def reports_page(request: Request):
+#     return templates.TemplateResponse("reports.html", {"request": request, "page_title": "Raporty"})
 
-@router.get("/api/reports")
+@router.get("/reports")
 async def get_reports_data(period: str = '3m', db: Session = Depends(get_db)):
     today = date.today()
     start_date = None

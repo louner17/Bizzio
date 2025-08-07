@@ -1,11 +1,8 @@
-import os
-
-if os.getenv("WEBSITE_SITE_NAME"): # Ta zmienna istnieje tylko na Azure
-    from database_prod import SessionLocal
-else: # W przeciwnym razie jesteśmy lokalnie
-    from database import SessionLocal
+from database import SessionLocal
 
 def get_db():
+    if SessionLocal is None:
+        raise Exception("Baza danych nie jest zainicjowana.")
     db = SessionLocal()
     try:
         yield db

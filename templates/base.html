@@ -119,6 +119,13 @@
 
 <script src="/static/js/global.js" defer></script>
 {% block scripts %}
+     {% if not request.session.user %}
+            // Sprawdzamy, czy nie jesteśmy już w trakcie logowania, aby uniknąć pętli
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/auth') {
+                // Jeśli użytkownik nie jest zalogowany, natychmiast przekieruj
+                window.location.href = '/login';
+            }
+        {% endif %}
     {% endblock %}
 </body>
 </html>

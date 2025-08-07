@@ -33,14 +33,17 @@ templates = Jinja2Templates(directory="templates")
 
 # Dołączanie routerów
 app.include_router(auth_router)
-app.include_router(dashboard_router, dependencies=[Depends(get_current_user)])
-app.include_router(calendar_router, dependencies=[Depends(get_current_user)])
-app.include_router(services_router, dependencies=[Depends(get_current_user)])
-app.include_router(costs_router, dependencies=[Depends(get_current_user)])
-app.include_router(clients_router, dependencies=[Depends(get_current_user)])
-app.include_router(reports_router, dependencies=[Depends(get_current_user)])
+app.include_router(dashboard_router)
+app.include_router(calendar_router)
+app.include_router(services_router)
+app.include_router(costs_router)
+app.include_router(clients_router)
+app.include_router(reports_router)
 
 # Główna strona
-@app.get("/", response_class=RedirectResponse, dependencies=[Depends(get_current_user)])
-async def read_root():
+@app.get("/")
+async def read_root(request: Request):
+    # Sprawdzamy sesję ręcznie, aby uniknąć błędu przy pierwszym wejściu
+    if not request.session.get('user'):
+        return RedirectResponse(url='/login')
     return RedirectResponse(url="/dashboard")
